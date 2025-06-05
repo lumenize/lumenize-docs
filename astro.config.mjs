@@ -2,14 +2,23 @@ import mdx from "@astrojs/mdx";
 import sitemap from "@astrojs/sitemap";
 import compress from "@playform/compress";
 import tailwindcss from "@tailwindcss/vite";
-import { defineConfig } from "astro/config";
+import { defineConfig, passthroughImageService } from "astro/config";
 import AutoImport from "astro-auto-import";
 import expressiveCode from "astro-expressive-code";
 import icon from "astro-icon";
+import cloudflare from "@astrojs/cloudflare";
 
 // https://astro.build/config
 export default defineConfig({
 	site: "https://pathfinder.cosmicthemes.com",
+  adapter: cloudflare({
+    platformProxy: {
+      enabled: true,
+    },
+  }),
+  image: {
+    service: passthroughImageService(),
+  },
 	// i18n configuration must match src/docs/config/translationData.json.ts
 	i18n: {
 		defaultLocale: "en",
