@@ -1,55 +1,73 @@
 {
-	"name": "pathfinder",
-	"type": "module",
-	"version": "1.3.0",
-	"scripts": {
-		"dev": "astro dev",
-		"start": "astro dev",
-		"build": "astro build && pagefind --site dist",
-		"preview": "astro preview",
-		"astro": "astro",
-		"winsearch": "robocopy dist/pagefind public/pagefind /E",
-		"osxsearch": "cp -r dist/pagefind public/",
-		"docs:config-i18n": "node ./src/docs/scripts/docs-config-i18n.js",
-		"config-i18n": "node ./scripts/config-i18n.js",
-		"format": "eslint . --fix && prettier -w \"**/*\" --ignore-unknown --cache",
-		"lint": "eslint ."
-	},
-	"dependencies": {
-		"@astrojs/mdx": "4.2.6",
-		"@astrojs/rss": "4.0.11",
-		"@astrojs/sitemap": "3.3.1",
-		"@fontsource-variable/inter": "5.2.5",
-		"@pagefind/default-ui": "1.3.0",
-		"@tabler/icons": "3.31.0",
-		"@tailwindcss/forms": "0.5.10",
-		"@tailwindcss/vite": "4.1.6",
-		"animejs": "3.2.2",
-		"astro": "5.7.12",
-		"astro-auto-import": "0.4.4",
-		"astro-expressive-code": "0.41.2",
-		"astro-icon": "1.1.5",
-		"astro-seo": "0.8.4",
-		"tailwindcss": "4.1.6",
-		"tw-animate-css": "1.2.9"
-	},
-	"devDependencies": {
-		"@eslint/js": "9.26.0",
-		"@playform/compress": "0.1.9",
-		"@types/animejs": "3.1.13",
-		"eslint": "9.26.0",
-		"eslint-plugin-astro": "1.3.1",
-		"eslint-plugin-jsx-a11y": "6.10.2",
-		"eslint-plugin-prettier": "5.4.0",
-		"eslint-plugin-simple-import-sort": "12.1.1",
-		"globals": "16.1.0",
-		"pagefind": "1.3.0",
-		"prettier-plugin-astro": "0.14.1",
-		"prettier-plugin-tailwindcss": "0.6.11",
-		"typescript-eslint": "8.32.0"
-	},
-	"overrides": {
-		"sharp": "^0.33.0"
-	},
-	"packageManager": "pnpm@10.11.1+sha512.e519b9f7639869dc8d5c3c5dfef73b3f091094b0a006d7317353c72b124e80e1afd429732e28705ad6bfa1ee879c1fce46c128ccebd3192101f43dd67c667912"
+  "name": "lumenize-docs",
+  "type": "module",
+  "description": "Build a personal website, blog, or portfolio with Astro.",
+  "version": "2.0.0",
+  "cloudflare": {
+    "label": "Astro Framework Starter",
+    "products": [
+      "Workers"
+    ],
+    "categories": [],
+    "icon_urls": [
+      "https://imagedelivery.net/wSMYJvS3Xw-n339CbDyDIA/5ca0ca32-e897-4699-d4c1-6b680512f000/public"
+    ],
+    "preview_image_url": "https://imagedelivery.net/wSMYJvS3Xw-n339CbDyDIA/33bbbf02-eda2-4d3f-b244-c27a280f3900/public",
+    "publish": true
+  },
+  "dependencies": {
+    "@astrojs/cloudflare": "12.5.0",
+    "typescript": "5.8.3",
+    "@astrojs/mdx": "4.2.6",
+    "@astrojs/rss": "4.0.11",
+    "@astrojs/sitemap": "3.3.1",
+    "@fontsource-variable/inter": "5.2.5",
+    "@pagefind/default-ui": "1.3.0",
+    "@tabler/icons": "3.31.0",
+    "@tailwindcss/forms": "0.5.10",
+    "@tailwindcss/vite": "4.1.6",
+    "animejs": "3.2.2",
+    "astro": "5.7.12",
+    "astro-auto-import": "0.4.4",
+    "astro-expressive-code": "0.41.2",
+    "astro-icon": "1.1.5",
+    "astro-seo": "0.8.4",
+    "tailwindcss": "4.1.6",
+    "tw-animate-css": "1.2.9"
+  },
+  "devDependencies": {
+    "wrangler": "4.16.1",
+    "@eslint/js": "9.26.0",
+    "@playform/compress": "0.1.9",
+    "@types/animejs": "3.1.13",
+    "eslint": "9.26.0",
+    "eslint-plugin-astro": "1.3.1",
+    "eslint-plugin-jsx-a11y": "6.10.2",
+    "eslint-plugin-prettier": "5.4.0",
+    "eslint-plugin-simple-import-sort": "12.1.1",
+    "globals": "16.1.0",
+    "pagefind": "1.3.0",
+    "prettier-plugin-astro": "0.14.1",
+    "prettier-plugin-tailwindcss": "0.6.11",
+    "typescript-eslint": "8.32.0"
+  },
+  "scripts": {
+    "astro": "astro",
+    "cf-typegen": "wrangler types",
+    "check": "astro build && tsc && wrangler deploy --dry-run",
+    "deploy": "wrangler deploy",
+    "preview": "astro build && wrangler dev",
+    "dev": "astro dev",
+    "start": "astro dev",
+    "build": "astro build && pagefind --site dist",
+    "winsearch": "robocopy dist/pagefind public/pagefind /E",
+    "osxsearch": "cp -r dist/pagefind public/",
+    "docs:config-i18n": "node ./src/docs/scripts/docs-config-i18n.js",
+    "config-i18n": "node ./scripts/config-i18n.js",
+    "format": "eslint . --fix && prettier -w \"**/*\" --ignore-unknown --cache",
+    "lint": "eslint ."
+  },
+  "overrides": {
+  	"sharp": "^0.33.0"
+  }
 }
