@@ -1,7 +1,7 @@
 import type { DocsSiteData } from "../types/configDataTypes";
 
 const docsSiteData: DocsSiteData = {
-	title: "Pathfinder",
+	title: "Lumenize",
 	description:
 		"A modern, fast, and feature-rich documentation theme built with Astro v5 and Tailwind CSS v4.",
 	navSocials: [
