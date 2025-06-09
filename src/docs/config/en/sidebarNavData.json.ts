@@ -23,7 +23,7 @@ const docSections: DocSection[] = [
 	},
 	{
 		id: "client-libraries",
-		title: "Client Libraries",
+		title: "Clients",
 	},
 	{
 		id: "examples",
