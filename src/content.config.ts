@@ -12,6 +12,7 @@ const docsCollection = defineCollection({
 				.object({
 					label: z.string().optional(),
 					order: z.number().optional(),
+					hidden: z.boolean().optional(),
 					badge: z
 						.object({
 							text: z.string(),

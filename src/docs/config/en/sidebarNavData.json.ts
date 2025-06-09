@@ -6,10 +6,6 @@ import type { DocSection } from "../types/configDataTypes";
  */
 const docSections: DocSection[] = [
 	{
-		id: "getting-started",
-		title: "Getting Started",
-	},
-	{
 		id: "hosted",
 		title: "Hosted by Lumenize",
 	},

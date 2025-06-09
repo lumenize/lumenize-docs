@@ -13,9 +13,9 @@ import SidebarLink from "./SidebarLink.astro";
 
 const currLocale = getLocaleFromUrl(Astro.url);
 
-// Get all non-draft docs
+// Get all non-draft docs that aren't hidden from sidebar
 const allDocs = await getCollection("docs", ({ data }) => {
-	return data.draft !== true;
+	return data.draft !== true && data.sidebar?.hidden !== true;
 });
 
 // get rid of pages from other languages and remove locale from slug
