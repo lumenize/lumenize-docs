@@ -11,11 +11,11 @@ const docSections: DocSection[] = [
 	},
 	{
 		id: "hosted",
-		title: "Hosted",
+		title: "Hosted by Lumenize",
 	},
 	{
-		id: "concepts",
-		title: "Concepts",
+		id: "self-host",
+		title: "Self Host on Cloudflare",
 	},
 	{
 		id: "guides",
