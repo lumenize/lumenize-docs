@@ -1,15 +1,19 @@
 ---
-title: Core Concepts
-description: Understanding the foundational concepts of Lumenize
+title: Overview
+description: Understanding Lumenize concepts and capabilities
 sidebar:
   order: 1
 ---
 
-# Core Concepts
+# Overview
 
-Lumenize is built around several key concepts that work together to provide a powerful, flexible backend system.
+Lumenize is a powerful backend system that combines foundational concepts with cutting-edge features to create a flexible, scalable platform built for modern enterprise applications.
 
-## The OrgTree
+## Core Concepts
+
+Lumenize is built around several key concepts that work together to provide a comprehensive backend solution.
+
+### The OrgTree
 
 The core data structure of every Lumenize server instance is the **OrgTree** - a directed acyclic graph (DAG) with a single root node representing your organization.
 
@@ -19,14 +23,14 @@ Key characteristics:
 - **Multiple parents**: Unlike traditional trees, nodes can have multiple parents
 - **Extensible**: Add custom fields to org unit schemas to fit your needs
 
-## Entities and Schemas
+### Entities and Schemas
 
 Everything in Lumenize is an **entity** - a data object with:
 - A defined schema
 - A unique identifier (UUIDv4)
 - Attachment to the OrgTree (directly or indirectly)
 
-### OrgNode Schema
+#### OrgNode Schema
 
 Default OrgTree node fields:
 - `id`: Unique UUIDv4 identifier
@@ -36,23 +40,7 @@ Default OrgTree node fields:
 
 You can extend nodes with custom schemas while preserving core functionality.
 
-## Access Control (ReBAC)
-
-Lumenize uses **Relationship-based Access Control (ReBAC)**, also known as graph-based access control (GBAC).
-
-### Permission Levels
-
-Permissions are cumulative and inherited:
-
-- **`read`**: Access to node values and attached entities
-- **`write`**: Modify values, create entities, soft delete/restore, add parents
-- **`admin`**: Update permissions for the node and descendants
-
-### Inheritance
-
-Permissions granted on a node are automatically inherited by all descendant nodes, enabling flexible access patterns across complex organizational structures.
-
-## Temporal Data Model
+### Temporal Data Model
 
 Lumenize maintains complete history using **valid time** semantics:
 
@@ -61,16 +49,102 @@ Lumenize maintains complete history using **valid time** semantics:
 - **Continuous timeline**: No gaps between snapshots
 - **Built for Temporal API**: Designed around JavaScript's upcoming Temporal API
 
+## Database Capabilities
+
+### Multi-Paradigm Data Store
+
+**Document DB + Relational DB + Realtime DB + Temporal DB + ORM**
+
+- **Document DB behavior**: MongoDB-like query language using SQLite's JSON support
+- **Relational DB behavior**: Specify fields for indexing, uniqueness, and foreign keys  
+- **Realtime DB behavior**: Pub-sub over WebSockets for live updates
+- **Temporal DB behavior**: Queryable history of all changes maintained automatically
+- **ORM behavior**: Schema enforcement and validation
+
+## API Interfaces
+
+### Model Context Protocol (MCP) Support
+
+- **Automatic tool exposure**: All public DO class methods become MCP tools
+- **Resource access**: All entities exposed as MCP resources
+- **HTTP stream support**: (Coming soon)
+- **Full MCP compliance**: Complete tools and resources spec with subscribe/unsubscribe (Coming soon)
+
+### Cloudflare Native RPC
+
+- **Seamless integration**: Your DO class methods are automatically available as RPC
+- **Built-in MCP methods**: Access MCP functionality via native RPC (e.g., `stub['tools/subtract'](42, 23)`)
+- **Convenient aliases**: Snake_case alternatives (e.g., `stub.tools_subtract(42, 23)`)
+
+### JSON-RPC 2.0
+
+- **Full spec compliance**: Batches, notifications, errors, named/positional parameters
+- **Method exposure**: All public DO class methods automatically available
+- **Entity operations**: Built-in get, upsert, delete methods for all entities
+- **Multi-transport**: HTTP and WebSockets (unlike Cloudflare native RPC)
+- **Real-time subscriptions**: Subscribe to entity updates via WebSockets
+
+## Client Libraries
+
+### Reactive Clients
+
+- **Svelte support**: `useLumenize()` hook with automatic reactivity
+- **React support**: (Coming soon)
+- **WebSocket multiplexing**: Shared connections across browser tabs via SharedWorker
+- **Storage-based reactivity**: localStorage/StorageEvent core for custom implementations
+
+### Generic Client
+
+- **Universal compatibility**: Non-reactive LumenizeClient for any JavaScript/TypeScript environment
+- **Simple API**: Clean interface for all Lumenize operations
+- **Flexible transport**: HTTP and WebSocket support
+
+## Security & Access Control
+
+### Built-in ReBAC
+
+- **Relationship-based**: Superset of traditional RBAC
+- **Graph-based permissions**: Complex organizational modeling
+- **Inheritance**: Permissions flow through organizational structure
+- **Granular control**: Read, write, and admin permission levels
+
+## Advanced Features
+
+### Aggregations (Coming Soon)
+
+- **Proven OLAP engine**: Based on Lumenize library used by Broadcom, BMW, CA
+- **Rollup reporting**: Automatic aggregation across organizational hierarchies  
+- **Peer-group benchmarking**: Compare performance within organizational groupings
+- **Real-time charts**: Auto-updating visualizations via declarative configuration
+- **AMCharts integration**: Built-in support with more chart libraries coming
+
+### Time-Series Support
+
+- **Temporal API integration**: Built around JavaScript's upcoming Temporal API
+- **Rich date/time handling**: Time zones, durations, and complex temporal operations
+- **Valid time semantics**: Complete audit trail with queryable history
+
+## Platform Integration
+
+### Cloudflare Ecosystem
+
+- **Durable Objects**: Built specifically for Cloudflare's paradigm
+- **Workers integration**: Seamless deployment and scaling
+- **Edge optimization**: Global distribution and low latency
+- **Ecosystem compatibility**: Works with Queues, Workflows, LLMs, KV, R2
+
 ## Why These Concepts Matter
 
-These foundational concepts enable:
+These foundational concepts and features enable:
 - **Flexible organizational modeling** through DAG structure
 - **Comprehensive access control** via ReBAC
 - **Complete audit trails** through temporal data
 - **Scalable architecture** leveraging Cloudflare's platform
+- **Modern API interfaces** with real-time capabilities
+- **Rich client library ecosystem** for reactive applications
 
 ## Next Steps
 
 - [Access Control (ReBAC)](/docs/concepts/rebac) - Deep dive into permission system
-- [Entities and Schemas](/docs/concepts/entities) - Learn about data modeling
-- [Temporal Features](/docs/concepts/temporal) - Understand time-based data handling
+- [Getting Started](/docs/getting-started/) - Begin building with Lumenize
+- [Client Libraries](/docs/client-libraries/) - Explore available client options

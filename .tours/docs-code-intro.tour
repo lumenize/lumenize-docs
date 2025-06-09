@@ -33,7 +33,7 @@
       "line": 4
     },
     {
-      "file": "src/docs/data/docs/en/getting-started/integrating.mdx",
+      "file": "src/docs/data/docs/en/getting-started/index.mdx",
       "description": "This is an example docs page post required and some optional frontmatter (the stuff at the top of the file).",
       "line": 10
     },

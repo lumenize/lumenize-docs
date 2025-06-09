@@ -10,6 +10,14 @@ const docSections: DocSection[] = [
 		title: "Getting Started",
 	},
 	{
+		id: "hosted",
+		title: "Hosted",
+	},
+	{
+		id: "concepts",
+		title: "Concepts",
+	},
+	{
 		id: "guides",
 		title: "Guides",
 	},
