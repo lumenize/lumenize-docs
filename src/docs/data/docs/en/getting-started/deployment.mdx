@@ -1,0 +1,280 @@
+---
+title: Deployment
+description: Deploy your Lumenize backend to production
+sidebar:
+  order: 5
+  label: Deployment
+---
+
+# Deployment
+
+Lumenize makes deployment effortless. Your backend automatically deploys to Cloudflare's global edge network, providing low-latency access worldwide.
+
+## Automatic Deployment
+
+Every time you save a schema, Lumenize automatically:
+
+1. **Validates** your schema changes
+2. **Generates** optimized API endpoints
+3. **Deploys** to Cloudflare's edge network
+4. **Updates** your client SDKs
+
+No build steps, no server management, no deployment pipelines to configure.
+
+## Environments
+
+Lumenize provides multiple environments for safe development:
+
+### Development Environment
+
+- **Purpose**: Local development and testing
+- **URL**: `https://dev-api.lumenize.dev/v1/{projectId}`
+- **Features**: 
+  - Instant schema updates
+  - Detailed error messages
+  - Development-only debugging tools
+
+### Staging Environment  
+
+- **Purpose**: Pre-production testing
+- **URL**: `https://staging-api.lumenize.dev/v1/{projectId}`
+- **Features**:
+  - Production-like environment
+  - Safe testing of schema migrations
+  - Performance monitoring
+
+### Production Environment
+
+- **Purpose**: Live applications
+- **URL**: `https://api.lumenize.dev/v1/{projectId}`
+- **Features**:
+  - 99.9% uptime SLA
+  - Global edge deployment
+  - Advanced monitoring and alerts
+
+## Deployment Process
+
+### 1. Schema Validation
+
+Before deployment, Lumenize validates:
+
+- **Syntax**: Valid JSON schema format
+- **Compatibility**: Changes don't break existing data
+- **Performance**: Indexes and queries are optimized
+- **Security**: Permissions are properly configured
+
+### 2. Migration Planning
+
+For schema changes, Lumenize automatically:
+
+- Analyzes data impact
+- Creates migration scripts
+- Plans zero-downtime updates
+- Validates backward compatibility
+
+### 3. Edge Deployment
+
+Your backend deploys to 200+ edge locations:
+
+```
+✅ North America (25 locations)
+✅ Europe (35 locations)  
+✅ Asia Pacific (40 locations)
+✅ South America (8 locations)
+✅ Africa (5 locations)
+✅ Middle East (12 locations)
+```
+
+### 4. Verification
+
+Post-deployment checks ensure:
+
+- All endpoints are responding
+- Data integrity is maintained
+- Performance meets SLA requirements
+- Real-time subscriptions are working
+
+## Configuration
+
+### Environment Variables
+
+Configure your deployment with environment variables:
+
+```bash
+# API Configuration
+LUMENIZE_PROJECT_ID=proj_abc123
+LUMENIZE_API_KEY=lum_live_xyz789
+LUMENIZE_ENVIRONMENT=production
+
+# Feature Flags
+LUMENIZE_ENABLE_ANALYTICS=true
+LUMENIZE_ENABLE_RATE_LIMITING=true
+LUMENIZE_ENABLE_CACHING=true
+
+# Security
+LUMENIZE_CORS_ORIGINS=https://myapp.com,https://admin.myapp.com
+LUMENIZE_WEBHOOK_SECRET=wh_secret_123
+```
+
+### Custom Domains
+
+Use your own domain for API endpoints:
+
+1. **Add domain** in project settings
+2. **Configure DNS** with provided CNAME
+3. **Verify domain** ownership
+4. **Deploy** automatically updates
+
+```bash
+# Before
+https://api.lumenize.dev/v1/proj_abc123/users
+
+# After  
+https://api.myapp.com/v1/users
+```
+
+### SSL Certificates
+
+Lumenize automatically provisions and manages SSL certificates:
+
+- **Automatic renewal** before expiration
+- **Global edge termination** for fast SSL handshakes
+- **TLS 1.3 support** for maximum security
+- **HSTS headers** enabled by default
+
+## Monitoring
+
+### Deployment Status
+
+Track deployment progress in real-time:
+
+```bash
+# Via CLI
+lumenize deploy status
+
+# Via Dashboard
+https://app.lumenize.dev/projects/{id}/deployments
+```
+
+### Health Checks
+
+Automatic health monitoring includes:
+
+- **API response times** across all regions
+- **Error rates** and failure patterns
+- **Database performance** and query times
+- **WebSocket connection** health
+
+### Alerts
+
+Get notified of issues:
+
+- **Email alerts** for deployment failures
+- **Slack integration** for team notifications
+- **Webhook alerts** for custom integrations
+- **SMS alerts** for critical issues (Enterprise)
+
+## Rollbacks
+
+Instant rollback capabilities:
+
+### Automatic Rollbacks
+
+Triggered when:
+- Error rate exceeds 5%
+- Response time increases >100%
+- Health checks fail consistently
+
+### Manual Rollbacks
+
+```bash
+# Via CLI
+lumenize rollback --version 1.2.3
+
+# Via Dashboard
+Click "Rollback" on any previous deployment
+```
+
+### Rollback Process
+
+1. **Instant cutover** to previous version
+2. **Data consistency** maintained
+3. **Client connections** seamlessly redirected
+4. **Zero downtime** guaranteed
+
+## Performance Optimization
+
+### Global Edge Caching
+
+- **Schema definitions** cached at edge
+- **Query results** cached based on rules
+- **Static assets** served from nearest location
+- **API responses** cached for configured TTL
+
+### Database Optimization
+
+- **Automatic indexing** based on query patterns
+- **Connection pooling** for efficient resource use
+- **Query optimization** suggestions in dashboard
+- **Performance analytics** and recommendations
+
+## Security
+
+### Deployment Security
+
+- **Signed deployments** prevent tampering
+- **Encrypted data** in transit and at rest
+- **Access controls** limit who can deploy
+- **Audit logs** track all deployment activity
+
+### Runtime Security
+
+- **DDoS protection** at Cloudflare edge
+- **Rate limiting** prevents abuse
+- **WAF rules** block malicious requests
+- **IP allowlisting** for sensitive operations
+
+## Troubleshooting
+
+### Common Issues
+
+**Deployment Stuck**
+```bash
+# Check deployment status
+lumenize deploy status --verbose
+
+# Force restart deployment
+lumenize deploy retry
+```
+
+**Schema Validation Errors**
+```bash
+# Validate schema locally
+lumenize schema validate ./schema.json
+
+# Get detailed error info
+lumenize deploy logs --deployment-id dep_123
+```
+
+**Performance Issues**
+```bash
+# Check regional performance
+lumenize performance --region us-east-1
+
+# Analyze slow queries
+lumenize analyze queries --slow
+```
+
+### Getting Help
+
+- **Real-time chat** in the dashboard
+- **Deployment logs** with detailed errors
+- **Community forum** for common issues
+- **Priority support** for paid plans
+
+## Next Steps
+
+- [Configure authentication](/docs/guides/authentication)
+- [Set up monitoring](/docs/guides/analytics)
+- [Explore examples](/docs/examples)
+- [Join the community](/docs/community)

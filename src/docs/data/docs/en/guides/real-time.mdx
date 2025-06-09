@@ -1,0 +1,615 @@
+---
+title: Real-time Features
+description: Build live, reactive applications with Lumenize WebSocket subscriptions
+sidebar:
+  order: 4
+  label: Real-time
+---
+
+# Real-time Features
+
+Lumenize provides powerful real-time capabilities through WebSocket connections, allowing you to build live, reactive applications with minimal effort.
+
+## WebSocket Connections
+
+### Establishing Connection
+
+```javascript
+import { LumenizeClient } from '@lumenize/client';
+
+const client = new LumenizeClient({
+  projectId: 'proj_abc123',
+  apiKey: 'lum_live_xyz789'
+});
+
+// Establish WebSocket connection
+await client.connect();
+
+// Check connection status
+console.log('Connected:', client.isConnected());
+
+// Handle connection events
+client.onConnect(() => {
+  console.log('WebSocket connected');
+});
+
+client.onDisconnect(() => {
+  console.log('WebSocket disconnected');
+});
+
+client.onReconnect(() => {
+  console.log('WebSocket reconnected');
+});
+```
+
+### Connection Management
+
+```javascript
+// Automatic reconnection (enabled by default)
+const client = new LumenizeClient({
+  projectId: 'proj_abc123',
+  apiKey: 'lum_live_xyz789',
+  websocket: {
+    autoReconnect: true,
+    reconnectInterval: 1000,     // 1 second
+    maxReconnectAttempts: 10,
+    heartbeatInterval: 30000     // 30 seconds
+  }
+});
+
+// Manual connection control
+await client.connect();
+await client.disconnect();
+
+// Connection with authentication
+await client.connect({
+  userId: 'user_123',
+  token: 'user_jwt_token'
+});
+```
+
+## Subscriptions
+
+### Entity Subscriptions
+
+Subscribe to changes on specific entities:
+
+```javascript
+// Subscribe to all task changes
+const unsubscribe = client.tasks.subscribe('*', (event) => {
+  console.log(`Task ${event.id} was ${event.type}:`, event.data);
+});
+
+// Subscribe to specific task
+client.tasks.subscribe('task_123', (event) => {
+  switch (event.type) {
+    case 'updated':
+      console.log('Task updated:', event.data);
+      break;
+    case 'deleted':
+      console.log('Task deleted:', event.id);
+      break;
+  }
+});
+
+// Cleanup subscription
+unsubscribe();
+```
+
+### Query Subscriptions
+
+Subscribe to query results that update in real-time:
+
+```javascript
+// Subscribe to filtered results
+const unsubscribe = client.tasks.subscribe({
+  where: {
+    status: 'pending',
+    assignedTo: 'user_123'
+  },
+  orderBy: { createdAt: 'desc' },
+  limit: 10
+}, (tasks) => {
+  console.log('My pending tasks:', tasks);
+  updateTaskList(tasks);
+});
+
+// Subscribe with complex filters
+client.orders.subscribe({
+  where: {
+    AND: [
+      { status: { in: ['pending', 'processing'] } },
+      { createdAt: { gte: new Date('2024-01-01') } },
+      { total: { gte: 100 } }
+    ]
+  }
+}, (orders) => {
+  console.log('High-value pending orders:', orders);
+});
+```
+
+### Collection Subscriptions
+
+Monitor entire collections for changes:
+
+```javascript
+// Subscribe to all users
+client.users.subscribe('*', (event) => {
+  if (event.type === 'created') {
+    showNotification(`New user registered: ${event.data.name}`);
+  }
+});
+
+// Subscribe to team-specific changes
+client.projects.subscribe({
+  where: { teamId: 'team_456' }
+}, (projects) => {
+  updateProjectDashboard(projects);
+});
+```
+
+## Event Types
+
+### Standard Events
+
+Every entity subscription receives these event types:
+
+```javascript
+client.tasks.subscribe('*', (event) => {
+  switch (event.type) {
+    case 'created':
+      console.log('New task created:', event.data);
+      break;
+    case 'updated':
+      console.log('Task updated:', event.data);
+      console.log('Changed fields:', event.changes);
+      break;
+    case 'deleted':
+      console.log('Task deleted:', event.id);
+      break;
+    case 'restored':
+      console.log('Task restored:', event.data);
+      break;
+  }
+});
+```
+
+### Custom Events
+
+Emit custom events from your server-side logic:
+
+```javascript
+// Server-side: Emit custom event
+await client.events.emit({
+  type: 'task_completed',
+  taskId: 'task_123',
+  data: {
+    completedBy: 'user_456',
+    completedAt: new Date()
+  },
+  channels: ['task_123', 'user_456', 'team_789']
+});
+
+// Client-side: Subscribe to custom events
+client.events.subscribe('task_completed', (event) => {
+  showNotification(`Task completed by ${event.data.completedBy}`);
+});
+```
+
+### System Events
+
+Monitor system-level events:
+
+```javascript
+// Schema changes
+client.system.subscribe('schema_updated', (event) => {
+  console.log('Schema updated:', event.entityName);
+  // Refresh client schema cache
+  client.refreshSchema();
+});
+
+// Permission changes
+client.system.subscribe('permissions_changed', (event) => {
+  console.log('Permissions updated for:', event.resourceId);
+  // Refresh UI based on new permissions
+  refreshPermissions();
+});
+```
+
+## Real-time Patterns
+
+### Live Chat
+
+Build a real-time chat application:
+
+```javascript
+// Subscribe to chat messages
+const unsubscribe = client.messages.subscribe({
+  where: { chatId: 'chat_123' },
+  orderBy: { createdAt: 'desc' },
+  limit: 50
+}, (messages) => {
+  updateChatUI(messages);
+});
+
+// Send message
+const sendMessage = async (text) => {
+  const message = await client.messages.create({
+    chatId: 'chat_123',
+    text: text,
+    authorId: currentUser.id
+  });
+  
+  // Message automatically appears due to subscription
+};
+
+// Typing indicators
+client.events.subscribe('user_typing', (event) => {
+  if (event.chatId === 'chat_123') {
+    showTypingIndicator(event.userId);
+  }
+});
+
+// Emit typing event
+const handleTyping = debounce(() => {
+  client.events.emit({
+    type: 'user_typing',
+    chatId: 'chat_123',
+    userId: currentUser.id
+  });
+}, 300);
+```
+
+### Live Dashboard
+
+Create a real-time analytics dashboard:
+
+```javascript
+// Subscribe to key metrics
+const subscriptions = [];
+
+// Active users count
+subscriptions.push(
+  client.analytics.subscribe('active_users', (count) => {
+    updateActiveUsersWidget(count);
+  })
+);
+
+// Recent orders
+subscriptions.push(
+  client.orders.subscribe({
+    where: { createdAt: { gte: startOfDay(new Date()) } },
+    orderBy: { createdAt: 'desc' }
+  }, (orders) => {
+    updateRecentOrdersList(orders);
+    updateRevenueChart(calculateRevenue(orders));
+  })
+);
+
+// System health
+subscriptions.push(
+  client.system.subscribe('health', (health) => {
+    updateHealthIndicators(health);
+  })
+);
+
+// Cleanup on component unmount
+const cleanup = () => {
+  subscriptions.forEach(unsub => unsub());
+};
+```
+
+### Collaborative Editing
+
+Implement real-time collaborative features:
+
+```javascript
+// Subscribe to document changes
+const documentId = 'doc_123';
+
+client.documents.subscribe(documentId, (event) => {
+  if (event.type === 'updated' && event.userId !== currentUser.id) {
+    // Another user updated the document
+    applyChanges(event.changes);
+  }
+});
+
+// Optimistic updates with conflict resolution
+const updateDocument = async (changes) => {
+  // Apply changes optimistically
+  applyChangesLocally(changes);
+  
+  try {
+    await client.documents.update(documentId, changes);
+  } catch (error) {
+    if (error.code === 'CONFLICT') {
+      // Resolve conflict
+      const latest = await client.documents.findById(documentId);
+      resolveConflict(latest, changes);
+    } else {
+      // Revert optimistic changes
+      revertChanges(changes);
+    }
+  }
+};
+
+// Presence indicators
+client.presence.subscribe(documentId, (users) => {
+  updateActiveEditors(users);
+});
+
+client.presence.join(documentId, {
+  userId: currentUser.id,
+  cursor: { line: 10, column: 5 }
+});
+```
+
+## Optimizations
+
+### Subscription Batching
+
+Group related subscriptions for efficiency:
+
+```javascript
+// Batch multiple subscriptions
+const batch = client.createSubscriptionBatch();
+
+batch.add('tasks', {
+  where: { assignedTo: currentUser.id }
+}, handleTaskUpdates);
+
+batch.add('projects', {
+  where: { teamId: currentTeam.id }
+}, handleProjectUpdates);
+
+batch.add('notifications', {
+  where: { userId: currentUser.id, read: false }
+}, handleNotifications);
+
+// Execute batch - uses single WebSocket connection
+const unsubscribeAll = await batch.execute();
+```
+
+### Selective Field Updates
+
+Subscribe to specific field changes:
+
+```javascript
+// Only subscribe to status changes
+client.tasks.subscribe('task_123', (event) => {
+  if (event.changes?.status) {
+    console.log('Status changed to:', event.data.status);
+  }
+}, {
+  fields: ['status', 'updatedAt']
+});
+
+// Multiple field monitoring
+client.users.subscribe('user_456', (event) => {
+  if (event.changes?.lastSeen) {
+    updatePresenceIndicator(event.data.lastSeen);
+  }
+  if (event.changes?.profile) {
+    updateUserProfile(event.data.profile);
+  }
+}, {
+  fields: ['lastSeen', 'profile']
+});
+```
+
+### Conditional Subscriptions
+
+Subscribe based on dynamic conditions:
+
+```javascript
+// Subscribe only during business hours
+const businessHoursSubscription = client.orders.subscribe({
+  where: { status: 'pending' },
+  condition: () => isBusinessHours()
+}, handlePendingOrders);
+
+// Subscribe based on user permissions
+const adminSubscription = client.users.subscribe('*', (event) => {
+  if (event.type === 'created') {
+    handleNewUser(event.data);
+  }
+}, {
+  condition: () => currentUser.role === 'admin'
+});
+```
+
+## Error Handling
+
+### Connection Errors
+
+```javascript
+client.onError((error) => {
+  switch (error.type) {
+    case 'CONNECTION_LOST':
+      showConnectionLostBanner();
+      break;
+    case 'AUTHENTICATION_FAILED':
+      redirectToLogin();
+      break;
+    case 'RATE_LIMIT_EXCEEDED':
+      showRateLimitWarning();
+      break;
+    case 'SUBSCRIPTION_FAILED':
+      console.error('Subscription failed:', error.details);
+      break;
+  }
+});
+```
+
+### Subscription Errors
+
+```javascript
+const subscription = client.tasks.subscribe('*', (event) => {
+  // Handle event
+}, {
+  onError: (error) => {
+    console.error('Subscription error:', error);
+    
+    if (error.code === 'PERMISSION_DENIED') {
+      console.log('Permission denied for subscription');
+    }
+  }
+});
+```
+
+### Reconnection Strategy
+
+```javascript
+const client = new LumenizeClient({
+  projectId: 'proj_abc123',
+  apiKey: 'lum_live_xyz789',
+  websocket: {
+    reconnectStrategy: 'exponential', // 'linear', 'exponential'
+    initialDelay: 1000,
+    maxDelay: 30000,
+    backoffFactor: 2,
+    maxAttempts: 10,
+    onReconnectFailed: () => {
+      showOfflineMode();
+    }
+  }
+});
+```
+
+## Client Libraries Integration
+
+### React Hook
+
+```jsx
+import { useLumenizeSubscription } from '@lumenize/react';
+
+function TaskList({ userId }) {
+  const { data: tasks, loading, error } = useLumenizeSubscription('tasks', {
+    where: { assignedTo: userId },
+    orderBy: { createdAt: 'desc' }
+  });
+  
+  if (loading) return <div>Loading tasks...</div>;
+  if (error) return <div>Error: {error.message}</div>;
+  
+  return (
+    <div>
+      {tasks.map(task => (
+        <TaskItem key={task.id} task={task} />
+      ))}
+    </div>
+  );
+}
+```
+
+### Svelte Store
+
+```svelte
+<script>
+  import { lumenizeSubscription } from '@lumenize/svelte';
+  
+  const tasks = lumenizeSubscription('tasks', {
+    where: { assignedTo: $currentUser.id }
+  });
+</script>
+
+{#if $tasks.loading}
+  <p>Loading...</p>
+{:else if $tasks.error}
+  <p>Error: {$tasks.error.message}</p>
+{:else}
+  {#each $tasks.data as task}
+    <TaskItem {task} />
+  {/each}
+{/if}
+```
+
+### Vue Composition API
+
+```vue
+<template>
+  <div>
+    <div v-if="loading">Loading...</div>
+    <div v-else-if="error">Error: {{ error.message }}</div>
+    <div v-else>
+      <TaskItem v-for="task in tasks" :key="task.id" :task="task" />
+    </div>
+  </div>
+</template>
+
+<script setup>
+import { useLumenizeSubscription } from '@lumenize/vue';
+
+const { data: tasks, loading, error } = useLumenizeSubscription('tasks', {
+  where: { assignedTo: currentUser.value.id }
+});
+</script>
+```
+
+## Performance Considerations
+
+### Memory Management
+
+```javascript
+// Proper cleanup prevents memory leaks
+const subscriptions = new Set();
+
+const addSubscription = (entity, query, handler) => {
+  const unsubscribe = client[entity].subscribe(query, handler);
+  subscriptions.add(unsubscribe);
+  return unsubscribe;
+};
+
+const cleanup = () => {
+  subscriptions.forEach(unsubscribe => unsubscribe());
+  subscriptions.clear();
+};
+
+// Call cleanup when component unmounts
+window.addEventListener('beforeunload', cleanup);
+```
+
+### Rate Limiting
+
+```javascript
+// Configure subscription rate limits
+const client = new LumenizeClient({
+  projectId: 'proj_abc123',
+  apiKey: 'lum_live_xyz789',
+  websocket: {
+    subscriptionRateLimit: {
+      maxSubscriptions: 100,    // Max concurrent subscriptions
+      maxEventsPerSecond: 1000  // Max events per second
+    }
+  }
+});
+```
+
+### Bandwidth Optimization
+
+```javascript
+// Compress WebSocket messages
+const client = new LumenizeClient({
+  projectId: 'proj_abc123',
+  apiKey: 'lum_live_xyz789',
+  websocket: {
+    compression: true,
+    binaryProtocol: true  // Use binary protocol for better performance
+  }
+});
+
+// Subscribe to minimal data
+client.tasks.subscribe({
+  where: { assignedTo: currentUser.id }
+}, handleTasks, {
+  fields: ['id', 'title', 'status'],  // Only subscribe to needed fields
+  includePermissions: false           // Skip permission data if not needed
+});
+```
+
+## Next Steps
+
+- [Temporal Data](/docs/guides/temporal) - Track changes over time
+- [Analytics](/docs/guides/analytics) - Monitor real-time metrics
+- [Client Libraries](/docs/client-libraries) - Framework-specific integrations
+- [Examples](/docs/examples/chat-application) - See real-time features in action

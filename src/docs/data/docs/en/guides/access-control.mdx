@@ -1,0 +1,611 @@
+---
+title: Access Control
+description: Implement flexible permissions with Lumenize's ReBAC system
+sidebar:
+  order: 3
+  label: Access Control
+---
+
+# Access Control
+
+Lumenize uses Relationship-based Access Control (ReBAC) to provide flexible, scalable permissions that model real-world organizational structures.
+
+## Understanding ReBAC
+
+ReBAC goes beyond traditional Role-Based Access Control (RBAC) by considering relationships between users, resources, and organizational units.
+
+### Key Concepts
+
+- **Subjects**: Users who perform actions
+- **Objects**: Resources being accessed (entities, fields, operations)
+- **Relationships**: Connections between subjects and objects
+- **Permissions**: What actions are allowed based on relationships
+
+## Defining Permissions
+
+### Schema-Level Permissions
+
+Define permissions directly in your entity schemas:
+
+```json
+{
+  "name": "Document",
+  "fields": {
+    "title": {"type": "string"},
+    "content": {"type": "text"},
+    "authorId": {"type": "reference", "entity": "User"},
+    "teamId": {"type": "reference", "entity": "Team"}
+  },
+  "permissions": {
+    "create": ["authenticated"],
+    "read": ["owner", "team_member", "public"],
+    "update": ["owner", "team_admin"],
+    "delete": ["owner", "admin"]
+  }
+}
+```
+
+### Field-Level Permissions
+
+Control access to specific fields:
+
+```json
+{
+  "name": "Employee",
+  "fields": {
+    "name": {"type": "string"},
+    "email": {"type": "email"},
+    "salary": {"type": "decimal", "precision": 2},
+    "performance": {"type": "json"}
+  },
+  "permissions": {
+    "read": ["authenticated"],
+    "update": ["owner", "hr"]
+  },
+  "fieldPermissions": {
+    "salary": {
+      "read": ["owner", "hr", "manager"],
+      "update": ["hr"]
+    },
+    "performance": {
+      "read": ["owner", "manager", "hr"],
+      "update": ["manager", "hr"]
+    }
+  }
+}
+```
+
+### Operation-Level Permissions
+
+Define permissions for custom operations:
+
+```json
+{
+  "name": "Project",
+  "customOperations": {
+    "archive": {
+      "permissions": ["owner", "admin"]
+    },
+    "export": {
+      "permissions": ["member", "admin"]
+    },
+    "clone": {
+      "permissions": ["authenticated"]
+    }
+  }
+}
+```
+
+## Permission Types
+
+### Built-in Permission Roles
+
+#### Public Access
+```json
+{
+  "permissions": {
+    "read": ["public"]  // Anyone can read
+  }
+}
+```
+
+#### Authenticated Users
+```json
+{
+  "permissions": {
+    "create": ["authenticated"],  // Any logged-in user
+    "read": ["authenticated"]
+  }
+}
+```
+
+#### Owner Permissions
+```json
+{
+  "permissions": {
+    "read": ["owner"],    // User who created the record
+    "update": ["owner"],
+    "delete": ["owner"]
+  }
+}
+```
+
+#### Relationship-Based Permissions
+```json
+{
+  "permissions": {
+    "read": ["team_member"],     // Members of associated team
+    "update": ["team_admin"],    // Admins of associated team
+    "delete": ["organization_admin"]  // Admins of associated organization
+  }
+}
+```
+
+### Custom Permission Roles
+
+Define custom roles for specific use cases:
+
+```json
+{
+  "name": "BlogPost",
+  "permissions": {
+    "read": ["public"],
+    "create": ["author", "editor"],
+    "update": ["post_author", "editor", "admin"],
+    "delete": ["post_author", "admin"],
+    "publish": ["editor", "admin"],
+    "feature": ["admin"]
+  },
+  "customRoles": {
+    "post_author": {
+      "condition": "authorId == currentUser.id"
+    },
+    "author": {
+      "condition": "currentUser.role == 'author'"
+    },
+    "editor": {
+      "condition": "currentUser.role in ['editor', 'admin']"
+    }
+  }
+}
+```
+
+## Organizational Hierarchy
+
+### OrgTree Structure
+
+Model your organization as a directed acyclic graph:
+
+```javascript
+// Create organization structure
+const org = await client.organizations.create({
+  name: "Acme Corp",
+  type: "company"
+});
+
+const engineering = await client.organizations.create({
+  name: "Engineering",
+  type: "department",
+  parent: org.id
+});
+
+const frontend = await client.organizations.create({
+  name: "Frontend Team",
+  type: "team",
+  parent: engineering.id
+});
+
+// Users inherit permissions from their position in the tree
+await client.users.update("user_123", {
+  organizationId: frontend.id,
+  role: "member"
+});
+```
+
+### Multiple Parent Relationships
+
+Handle complex organizational structures:
+
+```javascript
+// A user can belong to multiple teams
+const securityTeam = await client.organizations.create({
+  name: "Security Team",
+  type: "team",
+  parent: engineering.id
+});
+
+// Add user to multiple teams
+await client.organizationMemberships.create({
+  userId: "user_123",
+  organizationId: securityTeam.id,
+  role: "consultant"
+});
+
+// Now user has permissions from both frontend and security teams
+```
+
+### Permission Inheritance
+
+Permissions flow down the organizational hierarchy:
+
+```javascript
+// Grant permission at department level
+await client.permissions.grant({
+  subjectId: "user_123",
+  objectType: "Project",
+  objectId: engineering.id,
+  permission: "read",
+  scope: "descendants"  // Includes all teams under engineering
+});
+
+// User can now read all projects owned by engineering teams
+```
+
+## Dynamic Permissions
+
+### Attribute-Based Permissions
+
+Use entity attributes to determine access:
+
+```json
+{
+  "name": "Document",
+  "permissions": {
+    "read": ["owner", "confidentiality_cleared"],
+    "update": ["owner"]
+  },
+  "customRoles": {
+    "confidentiality_cleared": {
+      "condition": "this.confidentialityLevel <= currentUser.clearanceLevel"
+    }
+  }
+}
+```
+
+### Time-Based Permissions
+
+Implement temporary or scheduled access:
+
+```json
+{
+  "name": "Event",
+  "permissions": {
+    "register": ["before_deadline", "organizer"],
+    "attend": ["registered", "organizer"]
+  },
+  "customRoles": {
+    "before_deadline": {
+      "condition": "now() < this.registrationDeadline"
+    },
+    "registered": {
+      "condition": "currentUser.id in this.attendeeIds"
+    }
+  }
+}
+```
+
+### Context-Based Permissions
+
+Consider request context in permission decisions:
+
+```json
+{
+  "name": "FinancialReport",
+  "permissions": {
+    "read": ["business_hours_only", "manager"]
+  },
+  "customRoles": {
+    "business_hours_only": {
+      "condition": "isBusinessHours(context.requestTime) && currentUser.role == 'analyst'"
+    }
+  }
+}
+```
+
+## Permission Checking
+
+### Client-Side Checks
+
+Check permissions before showing UI elements:
+
+```javascript
+// Check if user can perform action
+const canEdit = await client.permissions.check({
+  action: 'update',
+  resource: 'Document',
+  resourceId: 'doc_123'
+});
+
+// Show/hide edit button based on permissions
+if (canEdit) {
+  showEditButton();
+}
+
+// Check multiple permissions at once
+const permissions = await client.permissions.checkMany([
+  { action: 'update', resource: 'Document', resourceId: 'doc_123' },
+  { action: 'delete', resource: 'Document', resourceId: 'doc_123' },
+  { action: 'share', resource: 'Document', resourceId: 'doc_123' }
+]);
+
+console.log(permissions); // { update: true, delete: false, share: true }
+```
+
+### Server-Side Enforcement
+
+Permissions are automatically enforced on the server:
+
+```javascript
+try {
+  // This will throw an error if user lacks permission
+  const doc = await client.documents.update('doc_123', {
+    title: 'New Title'
+  });
+} catch (error) {
+  if (error.code === 'PERMISSION_DENIED') {
+    console.log('You do not have permission to update this document');
+  }
+}
+```
+
+### Bulk Permission Checks
+
+Efficiently check permissions for multiple resources:
+
+```javascript
+// Check read permissions for all documents
+const documents = await client.documents.findMany({
+  where: { teamId: 'team_123' },
+  includePermissions: true
+});
+
+documents.forEach(doc => {
+  console.log(`Can edit ${doc.title}:`, doc._permissions.update);
+  console.log(`Can delete ${doc.title}:`, doc._permissions.delete);
+});
+```
+
+## Permission Management
+
+### Granting Permissions
+
+```javascript
+// Grant specific permission
+await client.permissions.grant({
+  subjectType: 'User',
+  subjectId: 'user_123',
+  objectType: 'Document',
+  objectId: 'doc_456',
+  permission: 'update'
+});
+
+// Grant role-based permission
+await client.permissions.grantRole({
+  userId: 'user_123',
+  organizationId: 'org_789',
+  role: 'admin'
+});
+
+// Grant temporary permission
+await client.permissions.grant({
+  subjectId: 'user_123',
+  objectType: 'Project',
+  objectId: 'proj_456',
+  permission: 'read',
+  expiresAt: new Date('2024-12-31')
+});
+```
+
+### Revoking Permissions
+
+```javascript
+// Revoke specific permission
+await client.permissions.revoke({
+  subjectId: 'user_123',
+  objectType: 'Document',
+  objectId: 'doc_456',
+  permission: 'update'
+});
+
+// Revoke all permissions for a user on a resource
+await client.permissions.revokeAll({
+  subjectId: 'user_123',
+  objectType: 'Document',
+  objectId: 'doc_456'
+});
+```
+
+### Permission Delegation
+
+Allow users to delegate their permissions:
+
+```javascript
+// User delegates their edit permission to another user
+await client.permissions.delegate({
+  fromUserId: 'user_123',
+  toUserId: 'user_456',
+  objectType: 'Document',
+  objectId: 'doc_789',
+  permission: 'update',
+  expiresAt: new Date('2024-06-30')
+});
+```
+
+## Advanced Patterns
+
+### Permission Templates
+
+Create reusable permission sets:
+
+```json
+{
+  "permissionTemplates": {
+    "documentCollaborator": {
+      "permissions": ["read", "comment"],
+      "fieldPermissions": {
+        "content": ["read", "suggest"]
+      }
+    },
+    "projectManager": {
+      "permissions": ["read", "update", "invite"],
+      "customOperations": ["archive", "export"]
+    }
+  }
+}
+```
+
+Apply templates to users:
+
+```javascript
+await client.permissions.applyTemplate({
+  userId: 'user_123',
+  template: 'documentCollaborator',
+  resourceType: 'Document',
+  resourceId: 'doc_456'
+});
+```
+
+### Conditional Permissions
+
+Implement complex business logic:
+
+```json
+{
+  "name": "ExpenseReport",
+  "permissions": {
+    "approve": ["manager_above_amount", "finance_any_amount"]
+  },
+  "customRoles": {
+    "manager_above_amount": {
+      "condition": "currentUser.role == 'manager' && this.amount > currentUser.approvalLimit"
+    },
+    "finance_any_amount": {
+      "condition": "currentUser.department == 'finance'"
+    }
+  }
+}
+```
+
+### Audit Trail
+
+Track permission changes:
+
+```javascript
+// Enable permission auditing
+await client.permissions.enableAuditing({
+  entity: 'Document',
+  trackChanges: true,
+  retentionDays: 365
+});
+
+// View permission history
+const auditLog = await client.permissions.getAuditLog({
+  resourceType: 'Document',
+  resourceId: 'doc_123',
+  fromDate: new Date('2024-01-01')
+});
+
+console.log(auditLog); // Array of permission changes
+```
+
+## Testing Permissions
+
+### Permission Testing Framework
+
+```javascript
+// Test suite for document permissions
+describe('Document Permissions', () => {
+  test('owner can update document', async () => {
+    const doc = await createTestDocument({ authorId: 'user_123' });
+    
+    const canUpdate = await client.permissions.check({
+      userId: 'user_123',
+      action: 'update',
+      resource: 'Document',
+      resourceId: doc.id
+    });
+    
+    expect(canUpdate).toBe(true);
+  });
+  
+  test('non-owner cannot delete document', async () => {
+    const doc = await createTestDocument({ authorId: 'user_123' });
+    
+    const canDelete = await client.permissions.check({
+      userId: 'user_456',
+      action: 'delete',
+      resource: 'Document',
+      resourceId: doc.id
+    });
+    
+    expect(canDelete).toBe(false);
+  });
+});
+```
+
+### Permission Simulation
+
+Test permissions without affecting real data:
+
+```javascript
+// Simulate user context
+const permissions = await client.permissions.simulate({
+  userId: 'user_123',
+  context: {
+    role: 'manager',
+    department: 'engineering',
+    clearanceLevel: 3
+  },
+  checks: [
+    { action: 'read', resource: 'Document', resourceId: 'doc_123' },
+    { action: 'approve', resource: 'ExpenseReport', resourceId: 'exp_456' }
+  ]
+});
+
+console.log(permissions); // Results of permission checks
+```
+
+## Performance Optimization
+
+### Permission Caching
+
+```javascript
+const client = new LumenizeClient({
+  projectId: 'proj_abc123',
+  apiKey: 'lum_live_xyz789',
+  permissions: {
+    cache: {
+      enabled: true,
+      ttl: 300, // 5 minutes
+      maxSize: 1000
+    }
+  }
+});
+
+// Permissions are cached automatically
+const canEdit = await client.permissions.check({
+  action: 'update',
+  resource: 'Document',
+  resourceId: 'doc_123'
+});
+```
+
+### Batch Permission Checks
+
+```javascript
+// Check permissions for multiple resources efficiently
+const documentIds = ['doc_1', 'doc_2', 'doc_3'];
+const permissions = await client.permissions.checkBatch({
+  action: 'read',
+  resource: 'Document',
+  resourceIds: documentIds
+});
+
+// Returns: { doc_1: true, doc_2: false, doc_3: true }
+```
+
+## Next Steps
+
+- [Real-time Features](/docs/guides/real-time) - Add live permission updates
+- [Temporal Data](/docs/guides/temporal) - Track permission changes over time
+- [Examples](/docs/examples) - See access control in real applications

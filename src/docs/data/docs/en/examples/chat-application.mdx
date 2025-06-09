@@ -1,0 +1,804 @@
+---
+title: Real-time Chat Application
+description: Build a live chat app with Lumenize real-time features
+sidebar:
+  order: 2
+  label: Chat App
+---
+
+# Real-time Chat Application
+
+Learn how to build a complete real-time chat application using Lumenize's WebSocket subscriptions, authentication, and access control features.
+
+## Overview
+
+We'll build a chat application with:
+
+- **Real-time messaging** with instant delivery
+- **Multiple chat rooms** with different access levels
+- **User presence indicators** showing who's online
+- **Message history** with pagination
+- **File sharing** and rich media support
+- **Typing indicators** for better UX
+- **Message reactions** and threading
+
+## Schema Design
+
+### User Schema
+
+```json
+{
+  "name": "User",
+  "fields": {
+    "email": {
+      "type": "email",
+      "required": true,
+      "unique": true
+    },
+    "username": {
+      "type": "string",
+      "required": true,
+      "unique": true,
+      "minLength": 3,
+      "maxLength": 20
+    },
+    "displayName": {
+      "type": "string",
+      "required": true,
+      "maxLength": 50
+    },
+    "avatar": {
+      "type": "url",
+      "required": false
+    },
+    "status": {
+      "type": "enum",
+      "values": ["online", "away", "busy", "offline"],
+      "default": "offline"
+    },
+    "lastSeen": {
+      "type": "datetime",
+      "autoValue": "now"
+    }
+  },
+  "permissions": {
+    "read": ["authenticated"],
+    "update": ["owner"],
+    "delete": ["owner", "admin"]
+  }
+}
+```
+
+### Chat Room Schema
+
+```json
+{
+  "name": "ChatRoom",
+  "fields": {
+    "name": {
+      "type": "string",
+      "required": true,
+      "maxLength": 100
+    },
+    "description": {
+      "type": "text",
+      "maxLength": 500
+    },
+    "type": {
+      "type": "enum",
+      "values": ["public", "private", "direct"],
+      "default": "public"
+    },
+    "ownerId": {
+      "type": "reference",
+      "entity": "User",
+      "required": true
+    },
+    "memberIds": {
+      "type": "references",
+      "entity": "User"
+    },
+    "isActive": {
+      "type": "boolean",
+      "default": true
+    }
+  },
+  "permissions": {
+    "read": ["member", "owner"],
+    "create": ["authenticated"],
+    "update": ["owner", "admin"],
+    "delete": ["owner", "admin"]
+  },
+  "customRoles": {
+    "member": {
+      "condition": "currentUser.id in this.memberIds || this.type == 'public'"
+    }
+  }
+}
+```
+
+### Message Schema
+
+```json
+{
+  "name": "Message",
+  "fields": {
+    "content": {
+      "type": "text",
+      "required": true,
+      "maxLength": 2000
+    },
+    "authorId": {
+      "type": "reference",
+      "entity": "User",
+      "required": true
+    },
+    "chatRoomId": {
+      "type": "reference",
+      "entity": "ChatRoom",
+      "required": true
+    },
+    "messageType": {
+      "type": "enum",
+      "values": ["text", "image", "file", "system"],
+      "default": "text"
+    },
+    "attachments": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "fields": {
+          "url": {"type": "url"},
+          "filename": {"type": "string"},
+          "mimeType": {"type": "string"},
+          "size": {"type": "integer"}
+        }
+      }
+    },
+    "replyToId": {
+      "type": "reference",
+      "entity": "Message",
+      "required": false
+    },
+    "editedAt": {
+      "type": "datetime",
+      "required": false
+    },
+    "reactions": {
+      "type": "json",
+      "default": {}
+    }
+  },
+  "permissions": {
+    "read": ["chat_member"],
+    "create": ["chat_member"],
+    "update": ["author"],
+    "delete": ["author", "chat_owner", "admin"]
+  },
+  "customRoles": {
+    "chat_member": {
+      "condition": "currentUser.id in this.chatRoom.memberIds || this.chatRoom.type == 'public'"
+    },
+    "author": {
+      "condition": "this.authorId == currentUser.id"
+    },
+    "chat_owner": {
+      "condition": "this.chatRoom.ownerId == currentUser.id"
+    }
+  },
+  "indexes": [
+    ["chatRoomId", "createdAt"],
+    ["authorId", "createdAt"]
+  ]
+}
+```
+
+## Frontend Implementation
+
+### React Chat Component
+
+```jsx
+import React, { useState, useEffect, useRef } from 'react';
+import { useLumenizeSubscription, useLumenize, useLumenizeAuth } from '@lumenize/react';
+
+function ChatApplication() {
+  const { user } = useLumenizeAuth();
+  const [selectedRoomId, setSelectedRoomId] = useState(null);
+  
+  // Subscribe to user's chat rooms
+  const { data: chatRooms } = useLumenizeSubscription('chatrooms', {
+    where: {
+      OR: [
+        { memberIds: { contains: user?.id } },
+        { type: 'public' }
+      ]
+    },
+    orderBy: { updatedAt: 'desc' }
+  });
+
+  return (
+    <div className="chat-app">
+      <Sidebar 
+        chatRooms={chatRooms} 
+        selectedRoomId={selectedRoomId}
+        onSelectRoom={setSelectedRoomId}
+      />
+      
+      {selectedRoomId ? (
+        <ChatRoom roomId={selectedRoomId} />
+      ) : (
+        <div className="no-room-selected">
+          Select a chat room to start messaging
+        </div>
+      )}
+    </div>
+  );
+}
+
+function ChatRoom({ roomId }) {
+  const { user } = useLumenizeAuth();
+  const messagesEndRef = useRef(null);
+  const [newMessage, setNewMessage] = useState('');
+  const [isTyping, setIsTyping] = useState(false);
+  
+  // Subscribe to messages in real-time
+  const { data: messages, loading } = useLumenizeSubscription('messages', {
+    where: { chatRoomId: roomId },
+    orderBy: { createdAt: 'asc' },
+    include: { author: true, replyTo: true }
+  });
+  
+  // Subscribe to typing indicators
+  const { data: typingUsers } = useLumenizeSubscription('typing', {
+    where: { chatRoomId: roomId, userId: { ne: user?.id } }
+  });
+  
+  // Message operations
+  const { create: sendMessage } = useLumenize('messages');
+  const { create: updateTyping } = useLumenize('typing');
+  
+  // Auto-scroll to bottom when new messages arrive
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [messages]);
+  
+  // Handle typing indicators
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      if (isTyping) {
+        updateTyping({
+          chatRoomId: roomId,
+          userId: user.id,
+          isTyping: false
+        });
+        setIsTyping(false);
+      }
+    }, 2000);
+    
+    return () => clearTimeout(timer);
+  }, [isTyping, roomId, user.id, updateTyping]);
+  
+  const handleSendMessage = async (e) => {
+    e.preventDefault();
+    if (!newMessage.trim()) return;
+    
+    await sendMessage({
+      content: newMessage,
+      chatRoomId: roomId,
+      authorId: user.id,
+      messageType: 'text'
+    });
+    
+    setNewMessage('');
+    setIsTyping(false);
+  };
+  
+  const handleTyping = (value) => {
+    setNewMessage(value);
+    
+    if (!isTyping && value.length > 0) {
+      setIsTyping(true);
+      updateTyping({
+        chatRoomId: roomId,
+        userId: user.id,
+        isTyping: true
+      });
+    }
+  };
+  
+  if (loading) return <div className="loading">Loading messages...</div>;
+  
+  return (
+    <div className="chat-room">
+      <div className="messages">
+        {messages?.map(message => (
+          <MessageBubble key={message.id} message={message} />
+        ))}
+        
+        {typingUsers?.length > 0 && (
+          <TypingIndicator users={typingUsers} />
+        )}
+        
+        <div ref={messagesEndRef} />
+      </div>
+      
+      <form className="message-form" onSubmit={handleSendMessage}>
+        <input
+          type="text"
+          value={newMessage}
+          onChange={(e) => handleTyping(e.target.value)}
+          placeholder="Type a message..."
+          disabled={!user}
+        />
+        <button type="submit" disabled={!newMessage.trim()}>
+          Send
+        </button>
+      </form>
+    </div>
+  );
+}
+
+function MessageBubble({ message }) {
+  const { user } = useLumenizeAuth();
+  const isOwn = message.authorId === user?.id;
+  const { update: updateMessage } = useLumenize('messages');
+  
+  const handleReaction = async (emoji) => {
+    const reactions = { ...message.reactions };
+    const userReactions = reactions[emoji] || [];
+    
+    if (userReactions.includes(user.id)) {
+      // Remove reaction
+      reactions[emoji] = userReactions.filter(id => id !== user.id);
+      if (reactions[emoji].length === 0) {
+        delete reactions[emoji];
+      }
+    } else {
+      // Add reaction
+      reactions[emoji] = [...userReactions, user.id];
+    }
+    
+    await updateMessage(message.id, { reactions });
+  };
+  
+  return (
+    <div className={`message ${isOwn ? 'own' : 'other'}`}>
+      {!isOwn && (
+        <img 
+          src={message.author.avatar} 
+          alt={message.author.displayName}
+          className="avatar"
+        />
+      )}
+      
+      <div className="message-content">
+        {!isOwn && (
+          <div className="author">{message.author.displayName}</div>
+        )}
+        
+        {message.replyTo && (
+          <div className="reply-to">
+            Replying to: {message.replyTo.content}
+          </div>
+        )}
+        
+        <div className="content">{message.content}</div>
+        
+        {message.attachments?.length > 0 && (
+          <div className="attachments">
+            {message.attachments.map((attachment, index) => (
+              <Attachment key={index} attachment={attachment} />
+            ))}
+          </div>
+        )}
+        
+        <div className="message-meta">
+          <span className="timestamp">
+            {new Date(message.createdAt).toLocaleTimeString()}
+          </span>
+          
+          {message.editedAt && (
+            <span className="edited">(edited)</span>
+          )}
+        </div>
+        
+        {Object.keys(message.reactions || {}).length > 0 && (
+          <div className="reactions">
+            {Object.entries(message.reactions).map(([emoji, userIds]) => (
+              <button
+                key={emoji}
+                className={`reaction ${userIds.includes(user.id) ? 'active' : ''}`}
+                onClick={() => handleReaction(emoji)}
+              >
+                {emoji} {userIds.length}
+              </button>
+            ))}
+          </div>
+        )}
+      </div>
+      
+      <MessageActions message={message} onReaction={handleReaction} />
+    </div>
+  );
+}
+```
+
+### Svelte Chat Implementation
+
+```svelte
+<!-- ChatApp.svelte -->
+<script>
+  import { lumenizeSubscription, lumenizeAuth } from '@lumenize/svelte';
+  import ChatRoom from './ChatRoom.svelte';
+  import Sidebar from './Sidebar.svelte';
+  
+  const auth = lumenizeAuth();
+  let selectedRoomId = null;
+  
+  // Subscribe to chat rooms
+  $: chatRooms = lumenizeSubscription('chatrooms', {
+    where: {
+      OR: [
+        { memberIds: { contains: $auth.user?.id } },
+        { type: 'public' }
+      ]
+    },
+    orderBy: { updatedAt: 'desc' }
+  });
+</script>
+
+<div class="chat-app">
+  <Sidebar 
+    chatRooms={$chatRooms} 
+    {selectedRoomId}
+    on:selectRoom={(e) => selectedRoomId = e.detail}
+  />
+  
+  {#if selectedRoomId}
+    <ChatRoom roomId={selectedRoomId} />
+  {:else}
+    <div class="no-room-selected">
+      Select a chat room to start messaging
+    </div>
+  {/if}
+</div>
+
+<!-- ChatRoom.svelte -->
+<script>
+  import { lumenizeSubscription, lumenizeMutation, lumenizeAuth } from '@lumenize/svelte';
+  import { afterUpdate } from 'svelte';
+  
+  export let roomId;
+  
+  const auth = lumenizeAuth();
+  let messagesContainer;
+  let newMessage = '';
+  let isTyping = false;
+  
+  // Real-time message subscription
+  $: messages = lumenizeSubscription('messages', {
+    where: { chatRoomId: roomId },
+    orderBy: { createdAt: 'asc' },
+    include: { author: true }
+  });
+  
+  // Mutation for sending messages
+  const sendMessage = lumenizeMutation('messages', 'create');
+  
+  // Auto-scroll to bottom
+  afterUpdate(() => {
+    if (messagesContainer) {
+      messagesContainer.scrollTop = messagesContainer.scrollHeight;
+    }
+  });
+  
+  const handleSendMessage = async (e) => {
+    e.preventDefault();
+    if (!newMessage.trim()) return;
+    
+    await sendMessage.mutate({
+      content: newMessage,
+      chatRoomId: roomId,
+      authorId: $auth.user.id
+    });
+    
+    newMessage = '';
+  };
+</script>
+
+<div class="chat-room">
+  <div class="messages" bind:this={messagesContainer}>
+    {#each $messages as message (message.id)}
+      <div class="message" class:own={message.authorId === $auth.user?.id}>
+        {#if message.authorId !== $auth.user?.id}
+          <img src={message.author.avatar} alt={message.author.displayName} class="avatar" />
+        {/if}
+        
+        <div class="content">
+          {#if message.authorId !== $auth.user?.id}
+            <div class="author">{message.author.displayName}</div>
+          {/if}
+          <div class="text">{message.content}</div>
+          <div class="timestamp">
+            {new Date(message.createdAt).toLocaleTimeString()}
+          </div>
+        </div>
+      </div>
+    {/each}
+  </div>
+  
+  <form on:submit={handleSendMessage}>
+    <input 
+      bind:value={newMessage}
+      placeholder="Type a message..."
+      disabled={$sendMessage.loading}
+    />
+    <button type="submit" disabled={!newMessage.trim() || $sendMessage.loading}>
+      Send
+    </button>
+  </form>
+</div>
+```
+
+## Advanced Features
+
+### File Upload Integration
+
+```jsx
+function FileUpload({ onFileUploaded }) {
+  const [uploading, setUploading] = useState(false);
+  const { upload } = useLumenize();
+  
+  const handleFileSelect = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    
+    setUploading(true);
+    
+    try {
+      const uploadResult = await upload(file, {
+        folder: 'chat-attachments',
+        public: true
+      });
+      
+      onFileUploaded({
+        url: uploadResult.url,
+        filename: file.name,
+        mimeType: file.type,
+        size: file.size
+      });
+    } catch (error) {
+      console.error('Upload failed:', error);
+    } finally {
+      setUploading(false);
+    }
+  };
+  
+  return (
+    <div className="file-upload">
+      <input 
+        type="file" 
+        onChange={handleFileSelect}
+        disabled={uploading}
+        accept="image/*,video/*,.pdf,.doc,.docx"
+      />
+      {uploading && <span>Uploading...</span>}
+    </div>
+  );
+}
+```
+
+### User Presence System
+
+```jsx
+function UserPresence() {
+  const { user } = useLumenizeAuth();
+  const { update: updateUser } = useLumenize('users');
+  
+  useEffect(() => {
+    // Set user as online when component mounts
+    updateUser(user.id, { 
+      status: 'online',
+      lastSeen: new Date()
+    });
+    
+    // Update last seen every 30 seconds
+    const interval = setInterval(() => {
+      updateUser(user.id, { lastSeen: new Date() });
+    }, 30000);
+    
+    // Set user as offline when leaving
+    const handleBeforeUnload = () => {
+      updateUser(user.id, { status: 'offline' });
+    };
+    
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    
+    return () => {
+      clearInterval(interval);
+      window.removeEventListener('beforeunload', handleBeforeUnload);
+      updateUser(user.id, { status: 'offline' });
+    };
+  }, [user.id, updateUser]);
+  
+  return null;
+}
+```
+
+### Message Search
+
+```jsx
+function MessageSearch({ chatRoomId }) {
+  const [searchQuery, setSearchQuery] = useState('');
+  const [searchResults, setSearchResults] = useState([]);
+  const [searching, setSearching] = useState(false);
+  
+  const { findMany: searchMessages } = useLumenize('messages');
+  
+  const handleSearch = async (query) => {
+    if (!query.trim()) {
+      setSearchResults([]);
+      return;
+    }
+    
+    setSearching(true);
+    
+    try {
+      const results = await searchMessages({
+        where: {
+          chatRoomId,
+          content: { contains: query }
+        },
+        include: { author: true },
+        orderBy: { createdAt: 'desc' },
+        limit: 20
+      });
+      
+      setSearchResults(results);
+    } catch (error) {
+      console.error('Search failed:', error);
+    } finally {
+      setSearching(false);
+    }
+  };
+  
+  // Debounce search
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      handleSearch(searchQuery);
+    }, 300);
+    
+    return () => clearTimeout(timer);
+  }, [searchQuery]);
+  
+  return (
+    <div className="message-search">
+      <input
+        type="search"
+        value={searchQuery}
+        onChange={(e) => setSearchQuery(e.target.value)}
+        placeholder="Search messages..."
+      />
+      
+      {searching && <div>Searching...</div>}
+      
+      {searchResults.length > 0 && (
+        <div className="search-results">
+          {searchResults.map(message => (
+            <SearchResult key={message.id} message={message} />
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+```
+
+## Performance Optimization
+
+### Message Pagination
+
+```jsx
+function MessageList({ chatRoomId }) {
+  const [page, setPage] = useState(0);
+  const limit = 50;
+  
+  const { data: messages, loading, hasMore } = useLumenizeInfiniteQuery('messages', {
+    where: { chatRoomId },
+    orderBy: { createdAt: 'desc' },
+    limit
+  });
+  
+  const allMessages = messages?.pages?.flatMap(page => page.data) ?? [];
+  
+  const loadMore = () => {
+    if (hasMore && !loading) {
+      setPage(prev => prev + 1);
+    }
+  };
+  
+  return (
+    <div className="message-list">
+      {hasMore && (
+        <button onClick={loadMore} disabled={loading}>
+          {loading ? 'Loading...' : 'Load Older Messages'}
+        </button>
+      )}
+      
+      {allMessages.map(message => (
+        <MessageBubble key={message.id} message={message} />
+      ))}
+    </div>
+  );
+}
+```
+
+### Message Caching
+
+```jsx
+// Configure aggressive caching for messages
+const client = new LumenizeClient({
+  projectId: 'proj_abc123',
+  apiKey: 'lum_live_xyz789',
+  cache: {
+    enabled: true,
+    ttl: 600000, // 10 minutes
+    maxSize: 5000, // Cache up to 5000 messages
+    keyGenerator: (entity, query) => {
+      // Custom cache key for messages
+      if (entity === 'messages') {
+        return `messages:${query.where?.chatRoomId}:${JSON.stringify(query)}`;
+      }
+      return null;
+    }
+  }
+});
+```
+
+## Deployment Considerations
+
+### Real-time Scale
+
+For high-traffic chat applications:
+
+```javascript
+// Configure WebSocket connection limits
+const client = new LumenizeClient({
+  projectId: 'proj_abc123',
+  apiKey: 'lum_live_xyz789',
+  websocket: {
+    maxConnections: 1000,      // Max concurrent connections
+    heartbeatInterval: 30000,  // 30 second heartbeat
+    reconnectDelay: 1000,      // 1 second reconnect delay
+    maxReconnectAttempts: 5
+  }
+});
+```
+
+### Content Moderation
+
+```json
+{
+  "name": "Message",
+  "hooks": {
+    "beforeCreate": "moderateContent",
+    "afterCreate": "notifyModerators"
+  },
+  "validation": {
+    "functions": [
+      {
+        "name": "checkProfanity",
+        "message": "Message contains inappropriate content"
+      }
+    ]
+  }
+}
+```
+
+## Next Steps
+
+- [Authentication Guide](/docs/guides/authentication) - Secure your chat app
+- [Real-time Features](/docs/guides/real-time) - Advanced WebSocket patterns  
+- [Access Control](/docs/guides/access-control) - Room permissions and moderation
+- [File Uploads](/docs/guides/files) - Handle media sharing
+- [Performance](/docs/guides/performance) - Scale your chat application

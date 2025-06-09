@@ -1,0 +1,557 @@
+---
+title: Advanced Schema Design
+description: Master complex data modeling with Lumenize schemas
+sidebar:
+  order: 1
+  label: Advanced Schemas
+---
+
+# Advanced Schema Design
+
+This guide covers advanced schema patterns and techniques for building complex, scalable data models with Lumenize.
+
+## Inheritance and Polymorphism
+
+### Base Schema Pattern
+
+Create reusable base schemas for common functionality:
+
+```json
+{
+  "name": "BaseEntity",
+  "abstract": true,
+  "fields": {
+    "id": {
+      "type": "uuid",
+      "primary": true,
+      "autoValue": "uuid"
+    },
+    "createdAt": {
+      "type": "datetime",
+      "autoValue": "now",
+      "immutable": true
+    },
+    "updatedAt": {
+      "type": "datetime", 
+      "autoValue": "now",
+      "onUpdate": "now"
+    },
+    "createdBy": {
+      "type": "reference",
+      "entity": "User",
+      "autoValue": "currentUser"
+    }
+  }
+}
+```
+
+### Schema Inheritance
+
+Extend base schemas with specific functionality:
+
+```json
+{
+  "name": "Product",
+  "extends": "BaseEntity",
+  "fields": {
+    "name": {
+      "type": "string",
+      "required": true,
+      "maxLength": 200
+    },
+    "price": {
+      "type": "decimal",
+      "precision": 2,
+      "min": 0
+    },
+    "category": {
+      "type": "reference",
+      "entity": "Category"
+    }
+  }
+}
+```
+
+### Polymorphic Relationships
+
+Handle multiple entity types in relationships:
+
+```json
+{
+  "name": "Comment", 
+  "fields": {
+    "content": {
+      "type": "text",
+      "required": true
+    },
+    "commentableType": {
+      "type": "enum",
+      "values": ["Post", "Product", "Event"]
+    },
+    "commentableId": {
+      "type": "uuid"
+    }
+  },
+  "relationships": {
+    "commentable": {
+      "type": "polymorphic",
+      "typeField": "commentableType",
+      "idField": "commentableId"
+    }
+  }
+}
+```
+
+## Complex Data Structures
+
+### Nested Objects
+
+Model complex hierarchical data:
+
+```json
+{
+  "name": "Order",
+  "fields": {
+    "customer": {
+      "type": "object",
+      "fields": {
+        "name": {"type": "string"},
+        "email": {"type": "email"},
+        "phone": {"type": "phone"}
+      }
+    },
+    "shipping": {
+      "type": "object",
+      "fields": {
+        "address": {
+          "type": "object",
+          "fields": {
+            "street": {"type": "string"},
+            "city": {"type": "string"}, 
+            "state": {"type": "string"},
+            "zipCode": {"type": "string"},
+            "country": {"type": "string"}
+          }
+        },
+        "method": {
+          "type": "enum",
+          "values": ["standard", "express", "overnight"]
+        }
+      }
+    },
+    "items": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "fields": {
+          "productId": {"type": "reference", "entity": "Product"},
+          "quantity": {"type": "integer", "min": 1},
+          "unitPrice": {"type": "decimal", "precision": 2},
+          "customizations": {"type": "json"}
+        }
+      }
+    }
+  }
+}
+```
+
+### Dynamic Schemas
+
+Handle variable data structures:
+
+```json
+{
+  "name": "FormSubmission",
+  "fields": {
+    "formId": {
+      "type": "reference", 
+      "entity": "Form"
+    },
+    "responses": {
+      "type": "json",
+      "validate": {
+        "function": "validateFormResponses",
+        "message": "Responses don't match form schema"
+      }
+    },
+    "metadata": {
+      "type": "json",
+      "schema": {
+        "type": "object",
+        "properties": {
+          "ipAddress": {"type": "string"},
+          "userAgent": {"type": "string"},
+          "referrer": {"type": "string"}
+        }
+      }
+    }
+  }
+}
+```
+
+## Performance Optimization
+
+### Strategic Indexing
+
+Design indexes for common query patterns:
+
+```json
+{
+  "name": "Event",
+  "fields": {
+    "title": {"type": "string"},
+    "startDate": {"type": "datetime"},
+    "endDate": {"type": "datetime"},
+    "location": {"type": "string"},
+    "category": {"type": "reference", "entity": "Category"},
+    "isPublic": {"type": "boolean"},
+    "organizerId": {"type": "reference", "entity": "User"}
+  },
+  "indexes": [
+    // Single field indexes
+    "title",
+    "startDate",
+    "category",
+    
+    // Compound indexes for common queries
+    {
+      "fields": ["isPublic", "startDate"],
+      "name": "public_events_by_date"
+    },
+    {
+      "fields": ["organizerId", "startDate"], 
+      "name": "organizer_events"
+    },
+    {
+      "fields": ["category", "startDate", "endDate"],
+      "name": "category_date_range"
+    },
+    
+    // Partial indexes for filtered queries
+    {
+      "fields": ["startDate"],
+      "where": {"isPublic": true},
+      "name": "public_events_only"
+    }
+  ]
+}
+```
+
+### Denormalization Strategies
+
+Balance normalization with query performance:
+
+```json
+{
+  "name": "BlogPost",
+  "fields": {
+    "title": {"type": "string"},
+    "content": {"type": "text"},
+    "author": {"type": "reference", "entity": "User"},
+    
+    // Denormalized author data for performance
+    "authorName": {
+      "type": "string",
+      "computed": "author.name",
+      "index": true
+    },
+    "authorAvatar": {
+      "type": "url",
+      "computed": "author.avatar"
+    },
+    
+    // Aggregated data
+    "commentCount": {
+      "type": "integer",
+      "computed": "count(comments)",
+      "default": 0
+    },
+    "avgRating": {
+      "type": "decimal",
+      "computed": "avg(ratings.score)",
+      "precision": 2
+    }
+  }
+}
+```
+
+## Data Validation
+
+### Custom Validation Functions
+
+Implement complex business rules:
+
+```json
+{
+  "name": "Appointment",
+  "fields": {
+    "startTime": {"type": "datetime"},
+    "endTime": {"type": "datetime"},
+    "providerId": {"type": "reference", "entity": "Provider"},
+    "customerId": {"type": "reference", "entity": "Customer"}
+  },
+  "validation": {
+    "functions": [
+      {
+        "name": "validateTimeSlot",
+        "message": "Appointment time conflicts with existing booking",
+        "condition": "!hasConflictingAppointment(providerId, startTime, endTime)"
+      },
+      {
+        "name": "validateBusinessHours", 
+        "message": "Appointment must be during business hours",
+        "condition": "isWithinBusinessHours(providerId, startTime, endTime)"
+      },
+      {
+        "name": "validateAdvanceBooking",
+        "message": "Appointments must be booked at least 24 hours in advance",
+        "condition": "startTime > now() + duration('24h')"
+      }
+    ]
+  }
+}
+```
+
+### Cross-Field Validation
+
+Validate relationships between fields:
+
+```json
+{
+  "name": "Discount",
+  "fields": {
+    "code": {"type": "string"},
+    "type": {"type": "enum", "values": ["percentage", "fixed"]},
+    "value": {"type": "decimal"},
+    "minOrderAmount": {"type": "decimal"},
+    "maxDiscountAmount": {"type": "decimal"},
+    "validFrom": {"type": "datetime"},
+    "validUntil": {"type": "datetime"}
+  },
+  "validation": {
+    "rules": [
+      {
+        "condition": "validUntil > validFrom",
+        "message": "End date must be after start date"
+      },
+      {
+        "condition": "type == 'percentage' ? (value >= 0 && value <= 100) : value >= 0",
+        "message": "Invalid discount value for type"
+      },
+      {
+        "condition": "maxDiscountAmount >= 0 || maxDiscountAmount == null",
+        "message": "Maximum discount amount must be positive"
+      }
+    ]
+  }
+}
+```
+
+## Advanced Relationships
+
+### Many-to-Many with Metadata
+
+Store additional data on relationship connections:
+
+```json
+{
+  "name": "ProjectMember",
+  "fields": {
+    "project": {"type": "reference", "entity": "Project"},
+    "user": {"type": "reference", "entity": "User"},
+    "role": {
+      "type": "enum",
+      "values": ["owner", "admin", "member", "viewer"]
+    },
+    "joinedAt": {"type": "datetime", "autoValue": "now"},
+    "permissions": {
+      "type": "array",
+      "items": "string"
+    },
+    "hourlyRate": {"type": "decimal", "precision": 2}
+  },
+  "indexes": [
+    ["project", "user"],
+    ["user", "role"]
+  ]
+}
+```
+
+### Self-Referential Relationships
+
+Model hierarchical or network structures:
+
+```json
+{
+  "name": "Category",
+  "fields": {
+    "name": {"type": "string"},
+    "parent": {
+      "type": "reference",
+      "entity": "Category",
+      "onDelete": "SET_NULL"
+    },
+    "children": {
+      "type": "computed",
+      "query": "Category.where(parent = this.id)"
+    },
+    "level": {
+      "type": "integer",
+      "computed": "parent ? parent.level + 1 : 0"
+    },
+    "path": {
+      "type": "string",
+      "computed": "parent ? parent.path + '/' + name : name"
+    }
+  }
+}
+```
+
+## Temporal Data Patterns
+
+### Effective Dating
+
+Track when records are effective:
+
+```json
+{
+  "name": "EmployeeSalary",
+  "fields": {
+    "employee": {"type": "reference", "entity": "Employee"},
+    "amount": {"type": "decimal", "precision": 2},
+    "effectiveFrom": {"type": "date"},
+    "effectiveTo": {"type": "date", "required": false},
+    "reason": {"type": "string"}
+  },
+  "indexes": [
+    ["employee", "effectiveFrom"],
+    {
+      "fields": ["employee", "effectiveFrom", "effectiveTo"],
+      "name": "employee_salary_timeline"
+    }
+  ],
+  "validation": {
+    "rules": [
+      {
+        "condition": "effectiveTo == null || effectiveTo > effectiveFrom",
+        "message": "End date must be after start date"
+      }
+    ]
+  }
+}
+```
+
+### Audit Trail
+
+Track all changes to important entities:
+
+```json
+{
+  "name": "Order", 
+  "auditTrail": {
+    "enabled": true,
+    "trackFields": ["status", "total", "shipping"],
+    "auditEntity": "OrderAudit"
+  },
+  "fields": {
+    "status": {
+      "type": "enum",
+      "values": ["pending", "confirmed", "shipped", "delivered", "cancelled"]
+    },
+    "total": {"type": "decimal", "precision": 2}
+  }
+}
+```
+
+## Schema Migration Strategies
+
+### Backward Compatible Changes
+
+Design changes that don't break existing clients:
+
+```json
+{
+  "name": "User",
+  "version": "2.0.0",
+  "fields": {
+    // Existing field (unchanged)
+    "email": {"type": "email"},
+    
+    // New optional field
+    "phoneNumber": {
+      "type": "phone",
+      "required": false,
+      "addedInVersion": "2.0.0"
+    },
+    
+    // Renamed field (with alias)
+    "fullName": {
+      "type": "string",
+      "aliases": ["name"],  // Support old field name
+      "renamedFrom": "name",
+      "renamedInVersion": "2.0.0"
+    }
+  }
+}
+```
+
+### Data Transformation
+
+Handle complex schema migrations:
+
+```json
+{
+  "migrations": [
+    {
+      "version": "2.1.0",
+      "changes": [
+        {
+          "type": "splitField",
+          "field": "fullName",
+          "into": ["firstName", "lastName"],
+          "transformer": "splitFullName"
+        },
+        {
+          "type": "normalizeData",
+          "field": "tags",
+          "transformer": "normalizeTagArray"
+        }
+      ]
+    }
+  ]
+}
+```
+
+## Testing Schemas
+
+### Schema Validation Tests
+
+```json
+{
+  "tests": [
+    {
+      "name": "Valid user creation",
+      "data": {
+        "email": "test@example.com",
+        "name": "John Doe"
+      },
+      "expectSuccess": true
+    },
+    {
+      "name": "Invalid email format",
+      "data": {
+        "email": "invalid-email",
+        "name": "John Doe"
+      },
+      "expectError": "INVALID_EMAIL"
+    }
+  ]
+}
+```
+
+## Next Steps
+
+- [Access Control Patterns](/docs/guides/access-control)
+- [Real-time Data Patterns](/docs/guides/real-time)
+- [Performance Optimization](/docs/guides/performance)
+- [Schema Examples](/docs/examples)

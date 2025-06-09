@@ -1,0 +1,524 @@
+---
+title: Temporal Data
+description: Track changes over time with Lumenize's built-in temporal features
+sidebar:
+  order: 5
+  label: Temporal Data
+---
+
+# Temporal Data
+
+Lumenize automatically maintains a complete history of all data changes using valid time semantics, enabling powerful time-travel queries and audit capabilities.
+
+## Understanding Temporal Data
+
+### Valid Time Semantics
+
+Every entity in Lumenize has temporal properties:
+
+```javascript
+// Every record has temporal metadata
+const user = await client.users.findById('user_123');
+console.log(user._temporal);
+// {
+//   validFrom: '2024-01-01T10:00:00.000Z',
+//   validTo: '9999-01-01T00:00:00.000Z',
+//   version: 3,
+//   createdAt: '2024-01-01T10:00:00.000Z',
+//   updatedAt: '2024-01-15T14:30:00.000Z'
+// }
+```
+
+### Snapshots
+
+Each change creates a new immutable snapshot:
+
+```javascript
+// Initial creation
+const user = await client.users.create({
+  name: 'John Doe',
+  email: 'john@example.com'
+});
+
+// Update creates new snapshot
+await client.users.update('user_123', {
+  name: 'John Smith'
+});
+
+// Previous snapshot is preserved with validTo timestamp
+```
+
+## Time Travel Queries
+
+### Query at Specific Time
+
+```javascript
+// Get user state as of January 1st, 2024
+const userAtTime = await client.users.findById('user_123', {
+  asOf: new Date('2024-01-01')
+});
+
+// Get all users as they were at a specific time
+const usersAtTime = await client.users.findMany({
+  where: { active: true },
+  asOf: new Date('2024-01-01T12:00:00Z')
+});
+```
+
+### Query Between Time Ranges
+
+```javascript
+// Get all versions of a user between dates
+const userHistory = await client.users.findVersions('user_123', {
+  from: new Date('2024-01-01'),
+  to: new Date('2024-01-31')
+});
+
+// Find users who were active during Q1 2024
+const activeUsersQ1 = await client.users.findMany({
+  where: { status: 'active' },
+  during: {
+    from: new Date('2024-01-01'),
+    to: new Date('2024-03-31')
+  }
+});
+```
+
+### Current vs Historical Data
+
+```javascript
+// Current data (default)
+const currentUser = await client.users.findById('user_123');
+
+// All historical versions
+const allVersions = await client.users.findVersions('user_123');
+
+// Specific version
+const version2 = await client.users.findVersion('user_123', { version: 2 });
+```
+
+## Change Tracking
+
+### Automatic Change Detection
+
+```javascript
+// Lumenize automatically tracks what changed
+const update = await client.users.update('user_123', {
+  name: 'Jane Doe',
+  email: 'jane@example.com'
+});
+
+console.log(update._changes);
+// {
+//   name: { from: 'John Smith', to: 'Jane Doe' },
+//   email: { from: 'john@example.com', to: 'jane@example.com' }
+// }
+```
+
+### Change Events
+
+```javascript
+// Subscribe to change events
+client.users.subscribe('user_123', (event) => {
+  if (event.type === 'updated') {
+    console.log('Changes:', event.changes);
+    console.log('Previous version:', event.previousVersion);
+    console.log('New version:', event.data);
+  }
+});
+```
+
+### Audit Queries
+
+```javascript
+// Find all changes to a user
+const changes = await client.audit.findChanges({
+  entityType: 'User',
+  entityId: 'user_123',
+  from: new Date('2024-01-01')
+});
+
+// Find who made changes
+const auditLog = await client.audit.findMany({
+  entityType: 'User',
+  entityId: 'user_123',
+  include: ['user', 'changes']
+});
+
+// Find all changes by a specific user
+const userChanges = await client.audit.findMany({
+  changedBy: 'admin_456',
+  from: new Date('2024-01-01')
+});
+```
+
+## Temporal Relationships
+
+### Relationship History
+
+```javascript
+// Track when relationships change
+const projectHistory = await client.projects.findVersions('proj_123', {
+  include: { 
+    members: { 
+      temporal: true  // Include historical membership
+    }
+  }
+});
+
+// Find who was on the team at a specific time
+const teamAtTime = await client.projects.findById('proj_123', {
+  asOf: new Date('2024-06-01'),
+  include: { members: true }
+});
+```
+
+### Effective Dating
+
+```javascript
+// Model entities with effective dates
+const salary = await client.salaries.create({
+  employeeId: 'emp_123',
+  amount: 75000,
+  effectiveFrom: new Date('2024-01-01'),
+  effectiveTo: new Date('2024-12-31')
+});
+
+// Query effective salaries
+const currentSalary = await client.salaries.findEffective('emp_123', {
+  asOf: new Date() // Current effective salary
+});
+
+const salaryAt = await client.salaries.findEffective('emp_123', {
+  asOf: new Date('2024-06-01') // Salary effective on June 1st
+});
+```
+
+## Temporal Analytics
+
+### Change Frequency Analysis
+
+```javascript
+// Analyze how frequently entities change
+const changeStats = await client.analytics.changeFrequency({
+  entityType: 'Project',
+  from: new Date('2024-01-01'),
+  to: new Date('2024-12-31'),
+  groupBy: 'month'
+});
+
+console.log(changeStats);
+// [
+//   { month: '2024-01', changes: 45 },
+//   { month: '2024-02', changes: 62 },
+//   ...
+// ]
+```
+
+### Data Lifecycle Analysis
+
+```javascript
+// Track entity lifecycle
+const lifecycle = await client.analytics.lifecycle({
+  entityType: 'Task',
+  from: new Date('2024-01-01'),
+  metrics: ['created', 'updated', 'completed', 'deleted']
+});
+
+// Analyze data retention
+const retention = await client.analytics.retention({
+  entityType: 'User',
+  cohortBy: 'month',
+  retentionPeriod: 'week'
+});
+```
+
+### Temporal Aggregations
+
+```javascript
+// Revenue over time
+const revenue = await client.analytics.timeSeries({
+  entity: 'Order',
+  metric: 'total',
+  aggregation: 'sum',
+  groupBy: 'day',
+  from: new Date('2024-01-01'),
+  to: new Date('2024-01-31')
+});
+
+// Active users at different points in time
+const activeUsers = await client.analytics.temporalSnapshot({
+  entity: 'User',
+  field: 'lastLoginAt',
+  threshold: '30 days',
+  snapshots: [
+    new Date('2024-01-01'),
+    new Date('2024-01-15'),
+    new Date('2024-01-31')
+  ]
+});
+```
+
+## Restoration and Recovery
+
+### Soft Deletes
+
+```javascript
+// Soft delete preserves history
+await client.users.delete('user_123', { soft: true });
+
+// Query includes deleted by default in temporal queries
+const userHistory = await client.users.findVersions('user_123');
+
+// Restore from soft delete
+await client.users.restore('user_123');
+```
+
+### Point-in-Time Recovery
+
+```javascript
+// Restore entity to previous state
+await client.users.restoreTo('user_123', {
+  asOf: new Date('2024-01-15T10:00:00Z')
+});
+
+// Restore specific version
+await client.users.restoreVersion('user_123', { version: 2 });
+
+// Bulk restore
+await client.users.restoreMany({
+  where: { deletedAt: { gte: new Date('2024-01-01') } },
+  asOf: new Date('2024-01-01')
+});
+```
+
+### Data Archival
+
+```javascript
+// Configure automatic archival
+await client.config.setArchivalPolicy({
+  entityType: 'AuditLog',
+  archiveAfter: '2 years',
+  storage: 'cold',
+  compression: true
+});
+
+// Manual archival
+await client.archive.entities({
+  entityType: 'Order',
+  where: { 
+    createdAt: { lt: new Date('2023-01-01') },
+    status: 'completed'
+  }
+});
+```
+
+## Performance Considerations
+
+### Temporal Indexes
+
+```json
+{
+  "name": "User",
+  "fields": {
+    "name": {"type": "string"},
+    "email": {"type": "email"}
+  },
+  "temporalIndexes": [
+    "email",
+    ["status", "_temporal.validFrom"],
+    {
+      "fields": ["department", "_temporal.validFrom", "_temporal.validTo"],
+      "name": "department_timeline"
+    }
+  ]
+}
+```
+
+### Efficient Queries
+
+```javascript
+// Use specific time ranges for better performance
+const recentChanges = await client.users.findVersions('user_123', {
+  from: new Date('2024-01-01'),
+  limit: 10
+});
+
+// Index on temporal fields for faster queries
+const activeAtTime = await client.users.findMany({
+  where: { 
+    status: 'active',
+    '_temporal.validFrom': { lte: specificDate },
+    '_temporal.validTo': { gt: specificDate }
+  }
+});
+```
+
+### Data Retention Policies
+
+```javascript
+// Configure retention policies
+await client.config.setRetentionPolicy({
+  entityType: 'AuditLog',
+  retainFor: '7 years',
+  summarizeAfter: '1 year',
+  purgeAfter: '10 years'
+});
+
+// Custom retention rules
+await client.config.setRetentionPolicy({
+  entityType: 'UserActivity', 
+  rules: [
+    {
+      condition: { eventType: 'login' },
+      retainFor: '2 years'
+    },
+    {
+      condition: { eventType: 'page_view' },
+      retainFor: '90 days'
+    }
+  ]
+});
+```
+
+## Integration with JavaScript Temporal API
+
+### Using Temporal Types
+
+```javascript
+import { Temporal } from '@js-temporal/polyfill';
+
+// Create with Temporal.Instant
+const user = await client.users.create({
+  name: 'John Doe',
+  hiredAt: Temporal.Now.instant()
+});
+
+// Query with Temporal.Duration
+const recentUsers = await client.users.findMany({
+  where: {
+    createdAt: { 
+      gte: Temporal.Now.instant().subtract(Temporal.Duration.from('P30D'))
+    }
+  }
+});
+
+// Time zone aware queries
+const localTime = Temporal.Now.zonedDateTimeISO('America/New_York');
+const businessHoursData = await client.analytics.findMany({
+  where: {
+    createdAt: {
+      gte: localTime.with({ hour: 9, minute: 0 }),
+      lt: localTime.with({ hour: 17, minute: 0 })
+    }
+  }
+});
+```
+
+### Duration Calculations
+
+```javascript
+// Calculate how long something existed
+const project = await client.projects.findById('proj_123');
+const duration = project._temporal.validTo === '9999-01-01T00:00:00.000Z' 
+  ? Temporal.Duration.between(
+      Temporal.Instant.from(project._temporal.validFrom),
+      Temporal.Now.instant()
+    )
+  : Temporal.Duration.between(
+      Temporal.Instant.from(project._temporal.validFrom),
+      Temporal.Instant.from(project._temporal.validTo)
+    );
+
+console.log(`Project existed for: ${duration.total('days')} days`);
+```
+
+## Best Practices
+
+### Query Optimization
+
+```javascript
+// ✅ Good: Specific time ranges
+const changes = await client.audit.findChanges({
+  entityId: 'user_123',
+  from: new Date('2024-01-01'),
+  to: new Date('2024-01-31')
+});
+
+// ❌ Avoid: Open-ended temporal queries
+const allChanges = await client.audit.findChanges({
+  entityId: 'user_123'
+  // No time bounds - could be expensive
+});
+```
+
+### Data Modeling
+
+```javascript
+// ✅ Good: Use effective dating for planned changes
+const salaryIncrease = await client.salaries.create({
+  employeeId: 'emp_123',
+  amount: 80000,
+  effectiveFrom: new Date('2024-07-01'), // Future date
+  reason: 'Annual review increase'
+});
+
+// ✅ Good: Track business-relevant temporal events
+const projectMilestone = await client.milestones.create({
+  projectId: 'proj_123',
+  name: 'Beta Release',
+  targetDate: new Date('2024-06-01'),
+  actualDate: new Date('2024-06-03')
+});
+```
+
+### Compliance and Auditing
+
+```javascript
+// Configure for compliance requirements
+await client.config.setComplianceSettings({
+  retentionPeriod: '7 years',      // SOX compliance
+  immutableAuditLog: true,         // Prevent tampering
+  encryptHistorical: true,         // Encrypt old data
+  auditLogIntegrity: 'blockchain'  // Blockchain verification
+});
+```
+
+## Troubleshooting
+
+### Performance Issues
+
+```javascript
+// Check temporal query performance
+const performance = await client.debug.analyzeQuery({
+  entity: 'User',
+  query: {
+    asOf: new Date('2024-01-01'),
+    where: { department: 'engineering' }
+  }
+});
+
+console.log('Query execution plan:', performance.plan);
+console.log('Index usage:', performance.indexes);
+```
+
+### Data Consistency
+
+```javascript
+// Verify temporal data integrity
+const integrity = await client.debug.checkTemporalIntegrity({
+  entityType: 'User',
+  entityId: 'user_123'
+});
+
+if (integrity.errors.length > 0) {
+  console.error('Temporal integrity issues:', integrity.errors);
+}
+```
+
+## Next Steps
+
+- [Analytics](/docs/guides/analytics) - Build reports with temporal data
+- [Real-time Features](/docs/guides/real-time) - Live temporal updates
+- [Examples](/docs/examples) - See temporal features in action
+- [API Reference](/docs/api) - Complete temporal API documentation

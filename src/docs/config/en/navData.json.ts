@@ -11,10 +11,6 @@ const navConfig: navItem[] = [
 		link: "/docs/getting-started/",
 	},
 	{
-		text: "Components",
-		link: "/docs/components/",
-	},
-	{
 		text: "Get Lumenize",
 		link: "https://cosmicthemes.com/themes/pathfinder",
 		newTab: true,

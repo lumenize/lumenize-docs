@@ -1,0 +1,629 @@
+---
+title: Analytics
+description: Build powerful analytics and reporting with Lumenize's OLAP capabilities
+sidebar:
+  order: 6
+  label: Analytics
+---
+
+# Analytics
+
+Lumenize provides enterprise-grade analytics capabilities powered by a proven OLAP engine used by Fortune 500 companies like Broadcom, BMW, and CA.
+
+## Overview
+
+### Built-in Analytics Engine
+
+Lumenize includes a sophisticated analytics engine that provides:
+
+- **Real-time aggregations** across your data
+- **Time-series analysis** with temporal support
+- **Multi-dimensional reporting** with drill-down capabilities
+- **Statistical functions** and trend analysis
+- **Automatic chart generation** with live updates
+
+### Key Features
+
+- **Declarative configuration** - Define reports with JSON
+- **Real-time updates** - Charts update automatically as data changes
+- **Performance optimized** - Pre-computed aggregations for speed
+- **Flexible dimensions** - Group by any field or relationship
+- **Custom metrics** - Create calculated fields and KPIs
+
+## Basic Aggregations
+
+### Simple Counts and Sums
+
+```javascript
+// Count total tasks
+const taskCount = await client.analytics.count('tasks');
+
+// Count with filters
+const completedTasks = await client.analytics.count('tasks', {
+  where: { completed: true }
+});
+
+// Sum order totals
+const totalRevenue = await client.analytics.sum('orders', 'total', {
+  where: { status: 'completed' }
+});
+
+// Average task completion time
+const avgCompletionTime = await client.analytics.avg('tasks', 'completionTime', {
+  where: { completed: true }
+});
+```
+
+### Group By Aggregations
+
+```javascript
+// Tasks by status
+const tasksByStatus = await client.analytics.groupBy('tasks', {
+  dimensions: ['status'],
+  metrics: {
+    count: { type: 'count' },
+    avgPriority: { type: 'avg', field: 'priority' }
+  }
+});
+
+// Revenue by month
+const monthlyRevenue = await client.analytics.groupBy('orders', {
+  dimensions: [{
+    field: 'createdAt',
+    datepart: 'month',
+    alias: 'month'
+  }],
+  metrics: {
+    revenue: { type: 'sum', field: 'total' },
+    orderCount: { type: 'count' }
+  },
+  orderBy: { month: 'asc' }
+});
+```
+
+### Multi-Dimensional Analysis
+
+```javascript
+// Sales by region and product category
+const salesAnalysis = await client.analytics.groupBy('orders', {
+  dimensions: ['region', 'productCategory'],
+  metrics: {
+    revenue: { type: 'sum', field: 'total' },
+    avgOrderValue: { type: 'avg', field: 'total' },
+    customerCount: { type: 'countDistinct', field: 'customerId' }
+  },
+  filters: {
+    createdAt: { gte: new Date('2024-01-01') }
+  }
+});
+
+// Team performance by month and priority
+const teamPerformance = await client.analytics.groupBy('tasks', {
+  dimensions: [
+    'assignedTeam',
+    { field: 'createdAt', datepart: 'month' },
+    'priority'
+  ],
+  metrics: {
+    completed: { 
+      type: 'count', 
+      where: { completed: true }
+    },
+    avgCompletionDays: {
+      type: 'avg',
+      field: 'completionTime',
+      unit: 'days'
+    }
+  }
+});
+```
+
+## Time Series Analytics
+
+### Trend Analysis
+
+```javascript
+// Daily active users over time
+const dailyActiveUsers = await client.analytics.timeSeries('users', {
+  metric: { type: 'countDistinct', field: 'id' },
+  timeField: 'lastLoginAt',
+  interval: 'day',
+  from: new Date('2024-01-01'),
+  to: new Date('2024-12-31')
+});
+
+// Revenue trend with moving average
+const revenueTrend = await client.analytics.timeSeries('orders', {
+  metric: { type: 'sum', field: 'total' },
+  timeField: 'createdAt',
+  interval: 'week',
+  from: new Date('2024-01-01'),
+  aggregations: [
+    { type: 'movingAverage', window: 4 }, // 4-week moving average
+    { type: 'growthRate', period: 'week' }
+  ]
+});
+```
+
+### Seasonal Analysis
+
+```javascript
+// Identify seasonal patterns
+const seasonalPatterns = await client.analytics.seasonal('orders', {
+  metric: { type: 'sum', field: 'total' },
+  timeField: 'createdAt',
+  seasonality: 'monthly', // 'weekly', 'monthly', 'quarterly'
+  yearsBack: 2
+});
+
+// Day of week analysis
+const dayOfWeekPatterns = await client.analytics.groupBy('orders', {
+  dimensions: [{
+    field: 'createdAt',
+    datepart: 'dayOfWeek',
+    alias: 'day'
+  }],
+  metrics: {
+    avgRevenue: { type: 'avg', field: 'total' },
+    orderCount: { type: 'count' }
+  }
+});
+```
+
+### Cohort Analysis
+
+```javascript
+// User retention cohorts
+const userRetention = await client.analytics.cohort('users', {
+  cohortField: 'createdAt',
+  retentionField: 'lastLoginAt',
+  cohortSize: 'month',
+  retentionPeriods: [1, 3, 6, 12], // months
+  from: new Date('2024-01-01')
+});
+
+// Revenue cohorts
+const revenueCohorts = await client.analytics.cohort('orders', {
+  cohortField: 'customer.firstOrderAt',
+  valueField: 'total',
+  cohortSize: 'month',
+  periods: [1, 3, 6, 12],
+  metric: 'sum'
+});
+```
+
+## Advanced Analytics
+
+### Statistical Functions
+
+```javascript
+// Statistical analysis of task completion times
+const taskStats = await client.analytics.statistics('tasks', 'completionTime', {
+  where: { completed: true },
+  functions: [
+    'mean',
+    'median', 
+    'standardDeviation',
+    'percentile_95',
+    'min',
+    'max'
+  ]
+});
+
+// Distribution analysis
+const scoreDistribution = await client.analytics.distribution('tests', 'score', {
+  buckets: 10,
+  range: { min: 0, max: 100 }
+});
+```
+
+### Correlation Analysis
+
+```javascript
+// Find correlations between metrics
+const correlations = await client.analytics.correlation([
+  { entity: 'tasks', field: 'estimatedHours' },
+  { entity: 'tasks', field: 'actualHours' },
+  { entity: 'tasks', field: 'complexityScore' }
+], {
+  where: { completed: true }
+});
+
+// Cross-entity correlation
+const customerValueCorrelation = await client.analytics.correlation([
+  { entity: 'customers', field: 'satisfactionScore' },
+  { entity: 'orders', field: 'total', aggregation: 'sum', groupBy: 'customerId' }
+]);
+```
+
+### Predictive Analytics
+
+```javascript
+// Trend prediction
+const salesForecast = await client.analytics.forecast('orders', {
+  metric: { type: 'sum', field: 'total' },
+  timeField: 'createdAt',
+  forecastPeriods: 12, // months
+  confidence: 0.95,
+  seasonality: 'auto'
+});
+
+// Anomaly detection
+const anomalies = await client.analytics.detectAnomalies('orders', {
+  metric: { type: 'sum', field: 'total' },
+  timeField: 'createdAt',
+  interval: 'day',
+  sensitivity: 'medium',
+  from: new Date('2024-01-01')
+});
+```
+
+## Real-time Dashboards
+
+### Live Metrics
+
+```javascript
+// Subscribe to real-time metrics
+const unsubscribe = client.analytics.subscribe('orders', {
+  metric: { type: 'sum', field: 'total' },
+  interval: 'hour',
+  window: '24h'
+}, (data) => {
+  updateRevenueChart(data);
+});
+
+// Multiple metrics in one subscription
+client.analytics.subscribeMultiple([
+  {
+    name: 'revenue',
+    entity: 'orders',
+    metric: { type: 'sum', field: 'total' }
+  },
+  {
+    name: 'users',
+    entity: 'users',
+    metric: { type: 'countDistinct', field: 'id' },
+    timeField: 'lastLoginAt',
+    window: '1h'
+  }
+], (metrics) => {
+  updateDashboard(metrics);
+});
+```
+
+### Chart Configuration
+
+```javascript
+// Configure automatic chart generation
+const chartConfig = await client.analytics.createChart({
+  type: 'line',
+  title: 'Daily Revenue Trend',
+  entity: 'orders',
+  dimensions: [{
+    field: 'createdAt',
+    datepart: 'day'
+  }],
+  metrics: {
+    revenue: { type: 'sum', field: 'total' }
+  },
+  realtime: true,
+  refreshInterval: 300000, // 5 minutes
+  chartOptions: {
+    xAxis: { title: 'Date' },
+    yAxis: { title: 'Revenue ($)', format: 'currency' },
+    colors: ['#007bff'],
+    animations: true
+  }
+});
+
+// Embed chart in your application
+const chartUrl = `https://charts.lumenize.dev/${chartConfig.id}`;
+```
+
+### Dashboard Templates
+
+```javascript
+// Create dashboard from template
+const dashboard = await client.analytics.createDashboard({
+  template: 'saas_metrics',
+  entities: {
+    users: 'User',
+    subscriptions: 'Subscription', 
+    revenue: 'Payment'
+  },
+  dateRange: '30d',
+  refreshInterval: '5m'
+});
+
+// Custom dashboard
+const customDashboard = await client.analytics.createDashboard({
+  name: 'Team Performance',
+  layout: 'grid',
+  widgets: [
+    {
+      type: 'metric',
+      title: 'Tasks Completed',
+      query: {
+        entity: 'tasks',
+        metric: { type: 'count', where: { completed: true } },
+        timeField: 'completedAt',
+        window: '7d'
+      }
+    },
+    {
+      type: 'chart',
+      title: 'Completion Rate Trend',
+      query: {
+        entity: 'tasks',
+        dimensions: [{ field: 'completedAt', datepart: 'day' }],
+        metrics: {
+          completed: { type: 'count', where: { completed: true } },
+          total: { type: 'count' }
+        },
+        calculated: {
+          completionRate: 'completed / total * 100'
+        }
+      },
+      chartType: 'line'
+    }
+  ]
+});
+```
+
+## Custom Metrics and KPIs
+
+### Calculated Fields
+
+```javascript
+// Define calculated metrics
+const kpis = await client.analytics.defineMetrics({
+  // Customer Lifetime Value
+  customerLTV: {
+    formula: 'avgOrderValue * purchaseFrequency * customerLifespan',
+    dependencies: {
+      avgOrderValue: {
+        entity: 'orders',
+        metric: { type: 'avg', field: 'total' },
+        groupBy: 'customerId'
+      },
+      purchaseFrequency: {
+        entity: 'orders', 
+        metric: { type: 'count' },
+        groupBy: 'customerId',
+        timeWindow: '365d'
+      },
+      customerLifespan: {
+        entity: 'customers',
+        metric: { type: 'avg', field: 'daysSinceFirstOrder' }
+      }
+    }
+  },
+  
+  // Net Promoter Score
+  nps: {
+    formula: 'promoters - detractors',
+    dependencies: {
+      promoters: {
+        entity: 'surveys',
+        metric: { type: 'count', where: { score: { gte: 9 } } }
+      },
+      detractors: {
+        entity: 'surveys',
+        metric: { type: 'count', where: { score: { lte: 6 } } }
+      }
+    },
+    scale: 100
+  }
+});
+
+// Use custom metrics
+const ltv = await client.analytics.calculate('customerLTV', {
+  groupBy: 'segment',
+  from: new Date('2024-01-01')
+});
+```
+
+### Business Intelligence Queries
+
+```javascript
+// Complex business analysis
+const customerSegmentation = await client.analytics.segment('customers', {
+  dimensions: [
+    {
+      name: 'valueSegment',
+      formula: `
+        CASE 
+          WHEN totalSpent >= 10000 THEN 'VIP'
+          WHEN totalSpent >= 1000 THEN 'Premium'
+          WHEN totalSpent >= 100 THEN 'Standard'
+          ELSE 'Basic'
+        END
+      `
+    },
+    {
+      name: 'engagementLevel',
+      formula: 'lastLoginDays <= 7 ? "Active" : lastLoginDays <= 30 ? "Inactive" : "Churned"'
+    }
+  ],
+  metrics: {
+    count: { type: 'count' },
+    avgRevenue: { type: 'avg', field: 'totalSpent' },
+    retentionRate: {
+      formula: 'activeCustomers / totalCustomers * 100',
+      timeWindow: '90d'
+    }
+  }
+});
+```
+
+## Performance Optimization
+
+### Materialized Views
+
+```javascript
+// Create materialized views for expensive queries
+await client.analytics.createMaterializedView('daily_revenue', {
+  query: {
+    entity: 'orders',
+    dimensions: [{ field: 'createdAt', datepart: 'day' }],
+    metrics: {
+      revenue: { type: 'sum', field: 'total' },
+      orderCount: { type: 'count' },
+      avgOrderValue: { type: 'avg', field: 'total' }
+    }
+  },
+  refreshSchedule: 'hourly',
+  indexes: ['day']
+});
+
+// Query materialized view
+const dailyStats = await client.analytics.query('daily_revenue', {
+  where: { day: { gte: new Date('2024-01-01') } }
+});
+```
+
+### Aggregation Caching
+
+```javascript
+// Configure caching for frequently accessed metrics
+await client.analytics.setCachePolicy({
+  entity: 'orders',
+  metrics: ['sum:total', 'count'],
+  dimensions: ['status', 'region'],
+  refreshInterval: '15m',
+  warmup: true // Pre-compute popular combinations
+});
+
+// Use cached aggregations
+const cachedRevenue = await client.analytics.sum('orders', 'total', {
+  useCache: true,
+  maxAge: '1h'
+});
+```
+
+### Query Optimization
+
+```javascript
+// Optimize query performance
+const optimizedQuery = await client.analytics.optimize({
+  entity: 'orders',
+  dimensions: ['region', 'productCategory'],
+  metrics: { revenue: { type: 'sum', field: 'total' } },
+  filters: { createdAt: { gte: new Date('2024-01-01') } }
+});
+
+console.log('Suggested indexes:', optimizedQuery.indexes);
+console.log('Estimated performance:', optimizedQuery.performance);
+```
+
+## Integration Examples
+
+### React Dashboard
+
+```jsx
+import { useAnalytics } from '@lumenize/react';
+
+function SalesDashboard() {
+  const { data: revenue, loading } = useAnalytics('orders', {
+    metric: { type: 'sum', field: 'total' },
+    dimensions: [{ field: 'createdAt', datepart: 'month' }],
+    from: new Date('2024-01-01'),
+    realtime: true
+  });
+
+  return (
+    <div>
+      <h2>Monthly Revenue</h2>
+      {loading ? (
+        <Spinner />
+      ) : (
+        <LineChart data={revenue} />
+      )}
+    </div>
+  );
+}
+```
+
+### Scheduled Reports
+
+```javascript
+// Create scheduled reports
+await client.analytics.createScheduledReport({
+  name: 'Weekly Team Performance',
+  schedule: '0 9 * * MON', // Every Monday at 9 AM
+  query: {
+    entity: 'tasks',
+    dimensions: ['assignedTeam'],
+    metrics: {
+      completed: { type: 'count', where: { completed: true } },
+      avgCompletionTime: { type: 'avg', field: 'completionTime' }
+    },
+    timeRange: '7d'
+  },
+  recipients: ['team-leads@company.com'],
+  format: 'pdf',
+  charts: true
+});
+
+// Export data
+const csvData = await client.analytics.export('orders', {
+  format: 'csv',
+  query: {
+    dimensions: ['region', 'productCategory'],
+    metrics: { revenue: { type: 'sum', field: 'total' } }
+  },
+  from: new Date('2024-01-01')
+});
+```
+
+## Best Practices
+
+### Performance Guidelines
+
+```javascript
+// ✅ Good: Use specific time ranges
+const recentRevenue = await client.analytics.sum('orders', 'total', {
+  where: { createdAt: { gte: new Date('2024-01-01') } }
+});
+
+// ❌ Avoid: Open-ended queries on large datasets
+const allTimeRevenue = await client.analytics.sum('orders', 'total');
+
+// ✅ Good: Limit dimensions for complex queries
+const topRegions = await client.analytics.groupBy('orders', {
+  dimensions: ['region'],
+  metrics: { revenue: { type: 'sum', field: 'total' } },
+  orderBy: { revenue: 'desc' },
+  limit: 10
+});
+```
+
+### Data Modeling
+
+```javascript
+// ✅ Good: Create indexes for common analytics queries
+{
+  "name": "Order",
+  "analyticsIndexes": [
+    ["createdAt", "region"],
+    ["customerId", "createdAt"], 
+    ["status", "total"]
+  ]
+}
+
+// ✅ Good: Use appropriate data types for metrics
+{
+  "fields": {
+    "revenue": { "type": "decimal", "precision": 2 },
+    "quantity": { "type": "integer" },
+    "rating": { "type": "decimal", "precision": 1, "min": 0, "max": 5 }
+  }
+}
+```
+
+## Next Steps
+
+- [Temporal Data](/docs/guides/temporal) - Add time-travel to your analytics
+- [Real-time Features](/docs/guides/real-time) - Live updating dashboards
+- [Examples](/docs/examples) - See analytics in real applications
+- [API Reference](/docs/api/analytics) - Complete analytics API

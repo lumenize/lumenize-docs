@@ -1,0 +1,223 @@
+---
+title: Roll Your Own Client
+description: Build custom Lumenize clients for any platform or framework
+sidebar:
+  order: 4
+  label: Custom Clients
+---
+
+# Roll Your Own Client
+
+While Lumenize provides official clients for JavaScript, React, and Svelte, you can build custom clients for any platform or framework using our REST API and WebSocket protocols.
+
+## Coming Soon
+
+We're currently working on comprehensive documentation for building custom Lumenize clients. This will include:
+
+### HTTP Client Implementation
+
+- **Authentication patterns** - How to handle API keys and user tokens
+- **Request/response formats** - Complete API specification
+- **Error handling** - Standard error codes and responses
+- **Pagination** - Cursor and offset-based pagination
+- **Caching strategies** - Client-side caching best practices
+
+### WebSocket Client Implementation
+
+- **Connection management** - Establishing and maintaining connections
+- **Subscription protocols** - Real-time data subscription patterns
+- **Message formats** - WebSocket message structure
+- **Reconnection logic** - Handling disconnections and failures
+- **Multiplexing** - Managing multiple subscriptions
+
+### Platform-Specific Guides
+
+- **Native mobile clients** - iOS (Swift) and Android (Kotlin/Java)
+- **Desktop applications** - Electron, .NET, Qt
+- **Server-side integrations** - Python, Ruby, Go, PHP, .NET
+- **Database connectors** - SQL and NoSQL database integrations
+- **Serverless functions** - AWS Lambda, Vercel, Cloudflare Workers
+
+### Framework Integrations
+
+- **Vue.js** - Composition API and Options API patterns
+- **Angular** - Services and observables
+- **Next.js** - SSR and SSG integration
+- **Nuxt.js** - Universal application patterns
+- **Flutter** - Cross-platform mobile integration
+
+### Advanced Topics
+
+- **Custom authentication** - Integrating with existing auth systems
+- **Offline capabilities** - Local storage and sync strategies
+- **Performance optimization** - Request batching and caching
+- **Type generation** - Auto-generating types from schemas
+- **Testing strategies** - Mocking and testing patterns
+
+## Current Resources
+
+While we work on the complete guide, you can:
+
+### Explore the API
+
+Use our interactive API explorer to understand the request/response patterns:
+
+```
+https://api.lumenize.dev/docs
+```
+
+### Study Official Clients
+
+Our official client implementations are open source:
+
+- [JavaScript Client](https://github.com/lumenize/client-js)
+- [React Client](https://github.com/lumenize/client-react)
+- [Svelte Client](https://github.com/lumenize/client-svelte)
+
+### Basic HTTP Client Example
+
+Here's a minimal example of a custom HTTP client:
+
+```python
+import requests
+import json
+
+class LumenizeClient:
+    def __init__(self, project_id, api_key, environment='production'):
+        self.project_id = project_id
+        self.api_key = api_key
+        self.base_url = f"https://api.lumenize.dev/v1/{project_id}"
+        self.headers = {
+            'Authorization': f'Bearer {api_key}',
+            'Content-Type': 'application/json'
+        }
+    
+    def get(self, entity, id=None, params=None):
+        url = f"{self.base_url}/{entity}"
+        if id:
+            url += f"/{id}"
+        
+        response = requests.get(url, headers=self.headers, params=params)
+        response.raise_for_status()
+        return response.json()
+    
+    def create(self, entity, data):
+        url = f"{self.base_url}/{entity}"
+        response = requests.post(url, headers=self.headers, json=data)
+        response.raise_for_status()
+        return response.json()
+    
+    def update(self, entity, id, data):
+        url = f"{self.base_url}/{entity}/{id}"
+        response = requests.patch(url, headers=self.headers, json=data)
+        response.raise_for_status()
+        return response.json()
+    
+    def delete(self, entity, id):
+        url = f"{self.base_url}/{entity}/{id}"
+        response = requests.delete(url, headers=self.headers)
+        response.raise_for_status()
+        return response.status_code == 204
+
+# Usage
+client = LumenizeClient('proj_abc123', 'lum_live_xyz789')
+
+# Create a user
+user = client.create('users', {
+    'name': 'John Doe',
+    'email': 'john@example.com'
+})
+
+# Get all users
+users = client.get('users')
+
+# Update user
+updated_user = client.update('users', user['id'], {
+    'name': 'Jane Doe'
+})
+```
+
+## Community Contributions
+
+We welcome community-contributed clients! If you build a client for a platform we don't officially support:
+
+### Contribution Process
+
+1. **Follow our patterns** - Study the official clients for consistency
+2. **Include comprehensive tests** - Ensure reliability
+3. **Document thoroughly** - Help others use your client
+4. **Submit for review** - We'll help promote quality clients
+
+### Recognition
+
+Community clients that meet our standards will be:
+
+- **Featured in our documentation**
+- **Listed in our client directory** 
+- **Promoted to our community**
+- **Supported in our Discord**
+
+## Get Notified
+
+Want to be notified when the complete custom client guide is ready?
+
+- **Join our Discord** - Get real-time updates
+- **Follow our blog** - Detailed guides and tutorials
+- **Subscribe to our newsletter** - Monthly development updates
+- **Watch our GitHub** - See client development progress
+
+## Need Help Now?
+
+If you're building a custom client and need immediate assistance:
+
+### Discord Support
+
+Join our Discord server and ask in the `#custom-clients` channel:
+
+```
+https://discord.gg/lumenize
+```
+
+### Email Support
+
+For complex integration questions, email our team:
+
+```
+integrations@lumenize.dev
+```
+
+### Consultation Services
+
+Need help building a production-ready client? We offer:
+
+- **Architecture consultation** - Design review and recommendations
+- **Implementation support** - Code review and debugging help  
+- **Performance optimization** - Scaling and performance tuning
+- **Ongoing maintenance** - Support and updates
+
+Contact us at: `consulting@lumenize.dev`
+
+## Contributing
+
+Help us prioritize client development by:
+
+### Voting on Platforms
+
+Tell us which platforms you need most:
+
+- **GitHub Discussions** - Vote on platform requests
+- **Community polls** - Participate in priority surveys
+- **Discord feedback** - Share your use cases
+
+### Sharing Use Cases
+
+Help us understand your needs:
+
+- **Platform requirements** - What platforms do you target?
+- **Framework preferences** - Which frameworks do you use?
+- **Integration patterns** - How do you plan to use Lumenize?
+- **Performance needs** - What are your scale requirements?
+
+---
+
+*This guide is actively being developed. Check back soon for comprehensive documentation on building custom Lumenize clients.*

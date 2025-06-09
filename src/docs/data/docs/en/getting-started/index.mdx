@@ -11,31 +11,53 @@ _You provide the schemas. Lumenize provides a complete MCP-first backend._
 
 Lumenize turns your schemas into a full featured MCP-first backend with Access Control, tools/resources/subscribe, CRUD, JSON-RPC, Cloudflare native RPC, Realtime pub-sub over WebSockets, Aggregations, Svelte/React support, and more.
 
-## The Problem
+## Why Lumenize?
 
-Cloudflare's Durable Objects (DO) are a paradigm shift in how we think about building applications. An SQLite database per DO instance, the ability to write stored procedures in Java/TypeScript, hibernatable WebSockets, and an elegant RPC implementation are all novel if not completely unique. Add to that the rest of the robust distributed computing foundations that Cloudflare provides -- Queues, Workflows, LLMs, KV, R2, etc. -- and you have a powerful platform for building modern applications.
+Stop building the same backend infrastructure over and over. Lumenize provides everything you need to go from schema to production in minutes, not months.
 
-However, paradigm shifts are hard. We are limited by our prior experiences and try to graft concepts and patterns onto a platform where they don't always sit comfortably.
+### Built for Modern Development
+- **Schema-first**: Define your data models, get a complete API
+- **MCP-native**: First-class Model Context Protocol support for AI integration
+- **Real-time ready**: WebSocket subscriptions and live updates out of the box
+- **Cloudflare powered**: Built on Durable Objects for global scale and performance
 
-## The Solution
+### Enterprise Ready
+- **Relationship-based Access Control**: Flexible permissions that model your organization
+- **Temporal data**: Complete audit trails and time-travel queries
+- **Multi-paradigm**: Document, relational, real-time, and temporal in one system
+- **Production proven**: Battle-tested OLAP engine used by Fortune 500 companies
 
-What if we built a backend that was designed from the ground up to take advantage of the DO paradigm and the Cloudflare platform?
+## Quick Start
 
-That's the goal of Lumenize.
+Get your backend running in under 5 minutes:
 
-## When to Use Lumenize
+1. **[Sign up](/docs/getting-started/signup)** for a Lumenize account
+2. **[Define your schemas](/docs/getting-started/schemas)** using our intuitive interface
+3. **[Deploy instantly](/docs/getting-started/deployment)** to Cloudflare's global network
+4. **[Connect your app](/docs/getting-started/quickstart)** with our client libraries
 
-Use Lumenize instead of Cloudflare's MCP and Agent offerings when:
-- You want to get up and running as quickly as possible with a full backend rather than piece together a bespoke solution
-- You want state synchronization but you've hit Agent's state synchronization limitations (no SQL data support, all or nothing updates, etc.)
-- You are building a product that requires comprehensive backend functionality out of the box
+## What's Included
 
-Use Cloudflare's MCP or Agent offerings instead when:
-- You have an existing Cloudflare solution but want to simply add MCP or Agent capabilities to it
-- You can't live with the design choices of this backend (the biggest objection will likely be the use of ReBAC)
+Every Lumenize backend includes:
 
-## What's Next?
+- **Complete REST & GraphQL APIs** - Auto-generated from your schemas
+- **Real-time subscriptions** - WebSocket-based live updates
+- **Client libraries** - React, Svelte, and vanilla JavaScript support
+- **Access control** - Enterprise-grade permission system
+- **Analytics dashboard** - Monitor usage and performance
+- **99.9% uptime SLA** - Powered by Cloudflare's global network
 
-- [Installation](/docs/getting-started/installation) - Get Lumenize up and running
-- [Core Concepts](/docs/concepts/overview) - Understand the key concepts behind Lumenize
-- [Features](/docs/features/overview) - Explore what Lumenize can do for you
+## Perfect For
+
+- **SaaS applications** requiring multi-tenant data isolation
+- **AI-powered apps** needing MCP integration
+- **Real-time applications** like dashboards and collaboration tools
+- **Enterprise software** with complex organizational structures
+- **Rapid prototyping** when you need a backend yesterday
+
+## Next Steps
+
+- [Create your first backend](/docs/getting-started/quickstart)
+- [Explore pricing plans](/docs/pricing)
+- [View live examples](/docs/examples)
+- [Join our community](/docs/community)

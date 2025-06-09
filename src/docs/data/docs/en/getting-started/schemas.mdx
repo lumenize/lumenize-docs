@@ -1,0 +1,424 @@
+---
+title: Defining Schemas
+description: Learn how to model your data with Lumenize schemas
+sidebar:
+  order: 4
+  label: Schemas
+---
+
+# Defining Schemas
+
+Schemas are the foundation of your Lumenize backend. They define your data structure, validation rules, relationships, and access permissions.
+
+## Schema Basics
+
+A Lumenize schema is a JSON document that describes an entity type:
+
+```json
+{
+  "name": "User",
+  "description": "Application users",
+  "fields": {
+    "email": {
+      "type": "email",
+      "required": true,
+      "unique": true
+    },
+    "name": {
+      "type": "string",
+      "required": true,
+      "maxLength": 100
+    },
+    "role": {
+      "type": "enum",
+      "values": ["admin", "user", "guest"],
+      "default": "user"
+    }
+  }
+}
+```
+
+## Field Types
+
+Lumenize supports rich field types with built-in validation:
+
+### Basic Types
+
+```json
+{
+  "textField": {
+    "type": "string",
+    "minLength": 1,
+    "maxLength": 255
+  },
+  "longText": {
+    "type": "text",
+    "maxLength": 10000
+  },
+  "age": {
+    "type": "integer",
+    "min": 0,
+    "max": 150
+  },
+  "price": {
+    "type": "decimal",
+    "precision": 2,
+    "min": 0
+  },
+  "isActive": {
+    "type": "boolean",
+    "default": true
+  }
+}
+```
+
+### Date and Time
+
+```json
+{
+  "birthDate": {
+    "type": "date"
+  },
+  "createdAt": {
+    "type": "datetime",
+    "autoValue": "now"
+  },
+  "publishTime": {
+    "type": "time"
+  },
+  "duration": {
+    "type": "duration"
+  }
+}
+```
+
+### Advanced Types
+
+```json
+{
+  "email": {
+    "type": "email",
+    "unique": true
+  },
+  "website": {
+    "type": "url"
+  },
+  "phone": {
+    "type": "phone",
+    "format": "international"
+  },
+  "location": {
+    "type": "geolocation"
+  },
+  "tags": {
+    "type": "array",
+    "items": "string"
+  },
+  "metadata": {
+    "type": "json"
+  }
+}
+```
+
+## Relationships
+
+Define connections between entities:
+
+### One-to-Many
+
+```json
+{
+  "name": "Post",
+  "fields": {
+    "author": {
+      "type": "reference",
+      "entity": "User",
+      "required": true
+    },
+    "category": {
+      "type": "reference", 
+      "entity": "Category"
+    }
+  }
+}
+```
+
+### Many-to-Many
+
+```json
+{
+  "name": "User",
+  "fields": {
+    "roles": {
+      "type": "references",
+      "entity": "Role"
+    }
+  }
+}
+```
+
+### Embedded Objects
+
+```json
+{
+  "address": {
+    "type": "object",
+    "fields": {
+      "street": {"type": "string"},
+      "city": {"type": "string"},
+      "country": {"type": "string"},
+      "zipCode": {"type": "string"}
+    }
+  }
+}
+```
+
+## Validation Rules
+
+Add custom validation to ensure data quality:
+
+```json
+{
+  "password": {
+    "type": "string",
+    "minLength": 8,
+    "validate": {
+      "regex": "^(?=.*[a-z])(?=.*[A-Z])(?=.*\\d)",
+      "message": "Password must contain uppercase, lowercase, and number"
+    }
+  },
+  "username": {
+    "type": "string",
+    "unique": true,
+    "validate": {
+      "function": "validateUsername",
+      "message": "Username contains invalid characters"
+    }
+  }
+}
+```
+
+## Indexes and Performance
+
+Optimize queries with strategic indexing:
+
+```json
+{
+  "name": "Post",
+  "fields": {
+    "title": {"type": "string"},
+    "status": {"type": "enum", "values": ["draft", "published"]},
+    "publishedAt": {"type": "datetime"},
+    "authorId": {"type": "reference", "entity": "User"}
+  },
+  "indexes": [
+    "title",
+    "status",
+    "publishedAt",
+    ["status", "publishedAt"],
+    {
+      "fields": ["authorId", "status"],
+      "name": "author_status_idx"
+    }
+  ]
+}
+```
+
+## Access Control
+
+Define who can access and modify data:
+
+```json
+{
+  "name": "Document",
+  "permissions": {
+    "create": ["authenticated"],
+    "read": ["owner", "team"],
+    "update": ["owner", "editor"],
+    "delete": ["owner", "admin"]
+  },
+  "fieldPermissions": {
+    "confidential": {
+      "read": ["admin"],
+      "write": ["admin"]
+    }
+  }
+}
+```
+
+## Lifecycle Hooks
+
+Run custom logic during entity operations:
+
+```json
+{
+  "hooks": {
+    "beforeCreate": "validateBusinessRules",
+    "afterCreate": "sendWelcomeEmail",
+    "beforeUpdate": "checkPermissions",
+    "afterUpdate": "notifySubscribers",
+    "beforeDelete": "archiveData"
+  }
+}
+```
+
+## Schema Evolution
+
+Lumenize handles schema changes gracefully:
+
+### Adding Fields
+
+```json
+{
+  "fields": {
+    "newField": {
+      "type": "string",
+      "default": "default_value",
+      "addedInVersion": "1.1.0"
+    }
+  }
+}
+```
+
+### Field Migrations
+
+```json
+{
+  "migrations": [
+    {
+      "version": "1.2.0",
+      "changes": [
+        {
+          "type": "renameField",
+          "from": "oldName",
+          "to": "newName"
+        },
+        {
+          "type": "changeType",
+          "field": "status",
+          "from": "string",
+          "to": "enum",
+          "values": ["active", "inactive"]
+        }
+      ]
+    }
+  ]
+}
+```
+
+## Best Practices
+
+### Naming Conventions
+
+- Use **PascalCase** for entity names: `User`, `BlogPost`
+- Use **camelCase** for field names: `firstName`, `createdAt`
+- Be descriptive: `isEmailVerified` vs `verified`
+
+### Performance Tips
+
+- Index fields used in `where` clauses
+- Use `reference` instead of embedding large objects
+- Limit array sizes for frequently queried entities
+- Use appropriate field types (don't store numbers as strings)
+
+### Security Guidelines
+
+- Always validate sensitive fields
+- Use field-level permissions for confidential data
+- Implement rate limiting on public endpoints
+- Sanitize user input in validation functions
+
+## Example: Complete Blog Schema
+
+```json
+{
+  "name": "BlogPost",
+  "description": "Blog posts with rich content and metadata",
+  "fields": {
+    "title": {
+      "type": "string",
+      "required": true,
+      "maxLength": 200,
+      "index": true
+    },
+    "slug": {
+      "type": "string",
+      "unique": true,
+      "validate": {
+        "regex": "^[a-z0-9-]+$"
+      }
+    },
+    "content": {
+      "type": "text",
+      "required": true
+    },
+    "excerpt": {
+      "type": "string",
+      "maxLength": 500
+    },
+    "status": {
+      "type": "enum",
+      "values": ["draft", "published", "archived"],
+      "default": "draft"
+    },
+    "author": {
+      "type": "reference",
+      "entity": "User",
+      "required": true
+    },
+    "categories": {
+      "type": "references",
+      "entity": "Category"
+    },
+    "tags": {
+      "type": "array",
+      "items": "string"
+    },
+    "featuredImage": {
+      "type": "url"
+    },
+    "publishedAt": {
+      "type": "datetime"
+    },
+    "viewCount": {
+      "type": "integer",
+      "default": 0,
+      "min": 0
+    },
+    "seo": {
+      "type": "object",
+      "fields": {
+        "metaTitle": {"type": "string", "maxLength": 60},
+        "metaDescription": {"type": "string", "maxLength": 160},
+        "canonicalUrl": {"type": "url"}
+      }
+    }
+  },
+  "indexes": [
+    "title",
+    "slug",
+    "status",
+    "publishedAt",
+    ["status", "publishedAt"],
+    ["author", "status"]
+  ],
+  "permissions": {
+    "create": ["author", "editor"],
+    "read": ["public"],
+    "update": ["owner", "editor"],
+    "delete": ["owner", "admin"]
+  },
+  "hooks": {
+    "beforeCreate": "generateSlug",
+    "beforeUpdate": "updateModifiedAt",
+    "afterPublish": "notifySubscribers"
+  }
+}
+```
+
+## Next Steps
+
+- [Deploy your schemas](/docs/getting-started/deployment)
+- [Learn about access control](/docs/guides/access-control)
+- [Explore real-time features](/docs/guides/real-time)
+- [See schemas in action](/docs/examples)

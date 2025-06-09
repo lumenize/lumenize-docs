@@ -10,12 +10,20 @@ const docSections: DocSection[] = [
 		title: "Getting Started",
 	},
 	{
-		id: "components",
-		title: "Components",
+		id: "guides",
+		title: "Guides",
 	},
 	{
-		id: "reference",
-		title: "Reference",
+		id: "client-libraries",
+		title: "Client Libraries",
+	},
+	{
+		id: "examples",
+		title: "Examples",
+	},
+	{
+		id: "deployment",
+		title: "Deployment",
 	},
 ];
 

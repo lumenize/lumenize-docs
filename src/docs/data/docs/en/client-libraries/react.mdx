@@ -1,0 +1,582 @@
+---
+title: React Client
+description: Build reactive React applications with Lumenize hooks and components
+sidebar:
+  order: 2
+  label: React
+---
+
+# React Client
+
+The Lumenize React client provides hooks and components for building reactive applications that automatically update when your backend data changes.
+
+## Installation
+
+```bash
+npm install @lumenize/react
+```
+
+## Setup
+
+### Provider Setup
+
+Wrap your app with the LumenizeProvider:
+
+```jsx
+import { LumenizeProvider } from '@lumenize/react';
+
+function App() {
+  return (
+    <LumenizeProvider
+      projectId="proj_abc123"
+      apiKey="lum_live_xyz789"
+      environment="production"
+    >
+      <Router>
+        <Routes>
+          <Route path="/" element={<Dashboard />} />
+          <Route path="/tasks" element={<TaskList />} />
+        </Routes>
+      </Router>
+    </LumenizeProvider>
+  );
+}
+```
+
+### Configuration Options
+
+```jsx
+<LumenizeProvider
+  projectId="proj_abc123"
+  apiKey="lum_live_xyz789"
+  config={{
+    realtime: true,           // Enable real-time subscriptions
+    cache: true,              // Enable local caching
+    optimisticUpdates: true,  // Enable optimistic updates
+    errorBoundary: true,      // Wrap in error boundary
+    suspense: false          // Use Suspense for loading states
+  }}
+>
+  <App />
+</LumenizeProvider>
+```
+
+## Data Hooks
+
+### useLumenize
+
+The main hook for querying and mutating data:
+
+```jsx
+import { useLumenize } from '@lumenize/react';
+
+function TaskList() {
+  const {
+    data: tasks,
+    loading,
+    error,
+    create,
+    update,
+    remove,
+    refresh
+  } = useLumenize('tasks', {
+    where: { status: 'pending' },
+    orderBy: { createdAt: 'desc' }
+  });
+
+  const handleCreateTask = async () => {
+    await create({
+      title: 'New Task',
+      status: 'pending',
+      priority: 'medium'
+    });
+  };
+
+  const handleUpdateTask = async (id, changes) => {
+    await update(id, changes);
+  };
+
+  const handleDeleteTask = async (id) => {
+    await remove(id);
+  };
+
+  if (loading) return <div>Loading tasks...</div>;
+  if (error) return <div>Error: {error.message}</div>;
+
+  return (
+    <div>
+      <button onClick={handleCreateTask}>Add Task</button>
+      {tasks.map(task => (
+        <TaskItem
+          key={task.id}
+          task={task}
+          onUpdate={handleUpdateTask}
+          onDelete={handleDeleteTask}
+        />
+      ))}
+    </div>
+  );
+}
+```
+
+### useLumenizeQuery
+
+For read-only queries with advanced options:
+
+```jsx
+import { useLumenizeQuery } from '@lumenize/react';
+
+function UserProfile({ userId }) {
+  const { data: user, loading, error, refetch } = useLumenizeQuery('users', userId, {
+    include: { 
+      profile: true,
+      tasks: {
+        where: { status: 'active' },
+        limit: 5
+      }
+    },
+    onSuccess: (user) => {
+      console.log('User loaded:', user.name);
+    },
+    onError: (error) => {
+      console.error('Failed to load user:', error);
+    }
+  });
+
+  if (loading) return <Spinner />;
+  if (error) return <ErrorMessage error={error} />;
+
+  return (
+    <div>
+      <h1>{user.name}</h1>
+      <p>{user.profile.bio}</p>
+      <TaskList tasks={user.tasks} />
+      <button onClick={refetch}>Refresh</button>
+    </div>
+  );
+}
+```
+
+### useLumenizeMutation
+
+For data mutations with optimistic updates:
+
+```jsx
+import { useLumenizeMutation } from '@lumenize/react';
+
+function TaskItem({ task }) {
+  const updateTask = useLumenizeMutation('tasks', 'update', {
+    optimistic: true,
+    onSuccess: (updatedTask) => {
+      showNotification(`Task "${updatedTask.title}" updated`);
+    },
+    onError: (error) => {
+      showErrorNotification(error.message);
+    }
+  });
+
+  const toggleComplete = () => {
+    updateTask.mutate(task.id, {
+      completed: !task.completed,
+      completedAt: !task.completed ? new Date() : null
+    });
+  };
+
+  return (
+    <div className={`task ${task.completed ? 'completed' : ''}`}>
+      <h3>{task.title}</h3>
+      <button 
+        onClick={toggleComplete}
+        disabled={updateTask.loading}
+      >
+        {updateTask.loading ? 'Updating...' : 
+         task.completed ? 'Mark Incomplete' : 'Mark Complete'}
+      </button>
+    </div>
+  );
+}
+```
+
+### useLumenizeInfiniteQuery
+
+For paginated data with infinite scrolling:
+
+```jsx
+import { useLumenizeInfiniteQuery } from '@lumenize/react';
+
+function PostFeed() {
+  const {
+    data,
+    loading,
+    error,
+    hasNextPage,
+    fetchNextPage,
+    isFetchingNextPage
+  } = useLumenizeInfiniteQuery('posts', {
+    where: { published: true },
+    orderBy: { publishedAt: 'desc' },
+    limit: 10
+  });
+
+  const posts = data?.pages?.flatMap(page => page.data) ?? [];
+
+  return (
+    <div>
+      {posts.map(post => (
+        <PostCard key={post.id} post={post} />
+      ))}
+      
+      {hasNextPage && (
+        <button 
+          onClick={fetchNextPage}
+          disabled={isFetchingNextPage}
+        >
+          {isFetchingNextPage ? 'Loading...' : 'Load More'}
+        </button>
+      )}
+      
+      {error && <ErrorMessage error={error} />}
+    </div>
+  );
+}
+```
+
+## Real-time Hooks
+
+### useLumenizeSubscription
+
+Subscribe to real-time updates:
+
+```jsx
+import { useLumenizeSubscription } from '@lumenize/react';
+
+function LiveChat({ chatId }) {
+  const { data: messages, loading } = useLumenizeSubscription('messages', {
+    where: { chatId },
+    orderBy: { createdAt: 'asc' },
+    limit: 100
+  });
+
+  const [newMessage, setNewMessage] = useState('');
+  const { create: sendMessage } = useLumenize('messages');
+
+  const handleSendMessage = async (e) => {
+    e.preventDefault();
+    if (!newMessage.trim()) return;
+
+    await sendMessage({
+      chatId,
+      content: newMessage,
+      authorId: 'current-user-id'
+    });
+    
+    setNewMessage('');
+  };
+
+  return (
+    <div className="chat">
+      <div className="messages">
+        {messages?.map(message => (
+          <MessageItem key={message.id} message={message} />
+        ))}
+      </div>
+      
+      <form onSubmit={handleSendMessage}>
+        <input
+          value={newMessage}
+          onChange={(e) => setNewMessage(e.target.value)}
+          placeholder="Type a message..."
+        />
+        <button type="submit">Send</button>
+      </form>
+    </div>
+  );
+}
+```
+
+### useLumenizePresence
+
+Track user presence in real-time:
+
+```jsx
+import { useLumenizePresence } from '@lumenize/react';
+
+function CollaborativeDocument({ documentId }) {
+  const { users: activeUsers, join, leave, updatePresence } = useLumenizePresence(documentId);
+  
+  useEffect(() => {
+    join({
+      userId: 'current-user-id',
+      cursor: { line: 1, column: 1 }
+    });
+
+    return () => leave();
+  }, [join, leave]);
+
+  const handleCursorMove = (line, column) => {
+    updatePresence({ cursor: { line, column } });
+  };
+
+  return (
+    <div>
+      <div className="active-users">
+        {activeUsers.map(user => (
+          <UserAvatar key={user.id} user={user} />
+        ))}
+      </div>
+      
+      <DocumentEditor 
+        documentId={documentId}
+        onCursorMove={handleCursorMove}
+      />
+    </div>
+  );
+}
+```
+
+## Authentication Hooks
+
+### useLumenizeAuth
+
+Handle authentication state and operations:
+
+```jsx
+import { useLumenizeAuth } from '@lumenize/react';
+
+function LoginForm() {
+  const { 
+    user, 
+    loading, 
+    login, 
+    logout, 
+    register,
+    isAuthenticated 
+  } = useLumenizeAuth();
+
+  const [credentials, setCredentials] = useState({ email: '', password: '' });
+
+  const handleLogin = async (e) => {
+    e.preventDefault();
+    try {
+      await login(credentials);
+    } catch (error) {
+      console.error('Login failed:', error);
+    }
+  };
+
+  if (loading) return <div>Loading...</div>;
+
+  if (isAuthenticated) {
+    return (
+      <div>
+        <p>Welcome, {user.name}!</p>
+        <button onClick={logout}>Logout</button>
+      </div>
+    );
+  }
+
+  return (
+    <form onSubmit={handleLogin}>
+      <input
+        type="email"
+        placeholder="Email"
+        value={credentials.email}
+        onChange={(e) => setCredentials(prev => ({ ...prev, email: e.target.value }))}
+      />
+      <input
+        type="password"
+        placeholder="Password"
+        value={credentials.password}
+        onChange={(e) => setCredentials(prev => ({ ...prev, password: e.target.value }))}
+      />
+      <button type="submit">Login</button>
+    </form>
+  );
+}
+```
+
+## Components
+
+### LumenizeList
+
+Render lists with built-in loading, error, and empty states:
+
+```jsx
+import { LumenizeList } from '@lumenize/react';
+
+function TaskDashboard() {
+  return (
+    <LumenizeList
+      entity="tasks"
+      query={{
+        where: { assignedTo: 'current-user-id' },
+        orderBy: { dueDate: 'asc' }
+      }}
+      renderItem={(task) => <TaskCard task={task} />}
+      emptyMessage="No tasks assigned to you"
+      loadingComponent={<TaskSkeleton />}
+      errorComponent={({ error, retry }) => (
+        <ErrorCard error={error} onRetry={retry} />
+      )}
+    />
+  );
+}
+```
+
+### LumenizeForm
+
+Form component with automatic validation and submission:
+
+```jsx
+import { LumenizeForm } from '@lumenize/react';
+
+function CreateTaskForm({ onSuccess }) {
+  return (
+    <LumenizeForm
+      entity="tasks"
+      operation="create"
+      onSuccess={onSuccess}
+      validate={{
+        title: (value) => value.length > 0 ? null : 'Title is required',
+        dueDate: (value) => new Date(value) > new Date() ? null : 'Due date must be in the future'
+      }}
+    >
+      {({ values, errors, handleChange, handleSubmit, loading }) => (
+        <form onSubmit={handleSubmit}>
+          <input
+            name="title"
+            placeholder="Task title"
+            value={values.title || ''}
+            onChange={handleChange}
+          />
+          {errors.title && <span className="error">{errors.title}</span>}
+          
+          <input
+            name="dueDate"
+            type="date"
+            value={values.dueDate || ''}
+            onChange={handleChange}
+          />
+          {errors.dueDate && <span className="error">{errors.dueDate}</span>}
+          
+          <select name="priority" value={values.priority || 'medium'} onChange={handleChange}>
+            <option value="low">Low</option>
+            <option value="medium">Medium</option>
+            <option value="high">High</option>
+          </select>
+          
+          <button type="submit" disabled={loading}>
+            {loading ? 'Creating...' : 'Create Task'}
+          </button>
+        </form>
+      )}
+    </LumenizeForm>
+  );
+}
+```
+
+## Advanced Patterns
+
+### Optimistic Updates
+
+```jsx
+function TaskList() {
+  const { data: tasks, update } = useLumenize('tasks');
+
+  const handleToggleComplete = async (task) => {
+    // Optimistic update
+    const optimisticUpdate = {
+      ...task,
+      completed: !task.completed,
+      completedAt: !task.completed ? new Date() : null
+    };
+
+    try {
+      await update(task.id, optimisticUpdate, { optimistic: true });
+    } catch (error) {
+      // Error handling is automatic - optimistic update will be reverted
+      console.error('Failed to update task:', error);
+    }
+  };
+
+  return (
+    <div>
+      {tasks.map(task => (
+        <TaskItem 
+          key={task.id} 
+          task={task} 
+          onToggle={handleToggleComplete}
+        />
+      ))}
+    </div>
+  );
+}
+```
+
+### Custom Hooks
+
+Create reusable hooks for common patterns:
+
+```jsx
+import { useLumenize } from '@lumenize/react';
+import { useMemo } from 'react';
+
+function useMyTasks(status = 'all') {
+  const query = useMemo(() => {
+    const where = { assignedTo: 'current-user-id' };
+    if (status !== 'all') {
+      where.status = status;
+    }
+    return { where, orderBy: { dueDate: 'asc' } };
+  }, [status]);
+
+  return useLumenize('tasks', query);
+}
+
+function useTaskStats() {
+  const { data: tasks } = useLumenize('tasks', {
+    where: { assignedTo: 'current-user-id' }
+  });
+
+  return useMemo(() => {
+    if (!tasks) return null;
+    
+    return {
+      total: tasks.length,
+      completed: tasks.filter(t => t.completed).length,
+      pending: tasks.filter(t => !t.completed).length,
+      overdue: tasks.filter(t => 
+        !t.completed && new Date(t.dueDate) < new Date()
+      ).length
+    };
+  }, [tasks]);
+}
+
+// Usage
+function TaskDashboard() {
+  const { data: pendingTasks } = useMyTasks('pending');
+  const stats = useTaskStats();
+
+  return (
+    <div>
+      {stats && (
+        <div className="stats">
+          <div>Total: {stats.total}</div>
+          <div>Completed: {stats.completed}</div>
+          <div>Pending: {stats.pending}</div>
+          <div>Overdue: {stats.overdue}</div>
+        </div>
+      )}
+      
+      <TaskList tasks={pendingTasks} />
+    </div>
+  );
+}
+```
+
+## Next Steps
+
+- [Svelte Client](/docs/client-libraries/svelte) - Svelte-specific stores and components
+- [JavaScript Client](/docs/client-libraries/javascript) - Vanilla JavaScript usage
+- [Real-time Features](/docs/guides/real-time) - WebSocket subscriptions
+- [Examples](/docs/examples) - See React integration in action

@@ -1,0 +1,538 @@
+---
+title: Authentication
+description: Secure your Lumenize backend with flexible authentication options
+sidebar:
+  order: 2
+  label: Authentication
+---
+
+# Authentication
+
+Lumenize provides flexible authentication options to secure your backend and manage user access across your applications.
+
+## Authentication Methods
+
+### Email/Password Authentication
+
+The most common authentication method for web applications:
+
+```javascript
+// Register a new user
+const user = await client.auth.register({
+  email: 'user@example.com',
+  password: 'securePassword123',
+  name: 'John Doe'
+});
+
+// Login existing user
+const session = await client.auth.login({
+  email: 'user@example.com',
+  password: 'securePassword123'
+});
+
+// Access user data
+console.log('Logged in as:', session.user.name);
+```
+
+### OAuth Providers
+
+Integrate with popular OAuth providers:
+
+```javascript
+// Login with Google
+const session = await client.auth.loginWithProvider('google', {
+  redirectTo: '/dashboard'
+});
+
+// Login with GitHub
+const session = await client.auth.loginWithProvider('github');
+
+// Login with custom OAuth provider
+const session = await client.auth.loginWithProvider('custom', {
+  clientId: 'your-client-id',
+  scope: 'email profile'
+});
+```
+
+### Magic Links
+
+Passwordless authentication via email:
+
+```javascript
+// Send magic link
+await client.auth.sendMagicLink({
+  email: 'user@example.com',
+  redirectTo: '/welcome'
+});
+
+// Verify magic link (handled automatically on redirect)
+const session = await client.auth.verifyMagicLink(token);
+```
+
+### API Key Authentication
+
+For server-to-server communication:
+
+```javascript
+const client = new LumenizeClient({
+  projectId: 'proj_abc123',
+  apiKey: 'lum_live_xyz789', // Server API key
+  authMode: 'api-key'
+});
+
+// All requests authenticated with API key
+const users = await client.users.findMany();
+```
+
+## Session Management
+
+### Session Lifecycle
+
+```javascript
+// Check authentication status
+const isAuthenticated = client.auth.isAuthenticated();
+
+// Get current session
+const session = client.auth.getSession();
+
+// Refresh session token
+await client.auth.refreshToken();
+
+// Logout
+await client.auth.logout();
+```
+
+### Session Events
+
+Listen for authentication state changes:
+
+```javascript
+client.auth.onSessionChange((session) => {
+  if (session) {
+    console.log('User logged in:', session.user);
+    // Redirect to dashboard
+    window.location.href = '/dashboard';
+  } else {
+    console.log('User logged out');
+    // Redirect to login
+    window.location.href = '/login';
+  }
+});
+
+// Listen for token refresh
+client.auth.onTokenRefresh((newToken) => {
+  console.log('Token refreshed');
+});
+```
+
+### Token Storage
+
+Configure how tokens are stored:
+
+```javascript
+const client = new LumenizeClient({
+  projectId: 'proj_abc123',
+  apiKey: 'lum_pub_xyz789',
+  auth: {
+    storage: 'localStorage', // 'localStorage', 'sessionStorage', 'memory'
+    autoRefresh: true,       // Automatically refresh tokens
+    refreshThreshold: 300    // Refresh 5 minutes before expiry
+  }
+});
+```
+
+## User Management
+
+### User Registration
+
+```javascript
+// Basic registration
+const user = await client.auth.register({
+  email: 'user@example.com',
+  password: 'password123',
+  name: 'John Doe'
+});
+
+// Registration with custom fields
+const user = await client.auth.register({
+  email: 'user@example.com',
+  password: 'password123',
+  profile: {
+    firstName: 'John',
+    lastName: 'Doe',
+    company: 'Acme Corp',
+    role: 'developer'
+  }
+});
+
+// Registration with email verification
+const user = await client.auth.register({
+  email: 'user@example.com',
+  password: 'password123',
+  requireEmailVerification: true
+});
+```
+
+### Profile Management
+
+```javascript
+// Get current user profile
+const user = await client.auth.getCurrentUser();
+
+// Update user profile
+const updatedUser = await client.auth.updateProfile({
+  name: 'Jane Doe',
+  avatar: 'https://example.com/avatar.jpg'
+});
+
+// Change password
+await client.auth.changePassword({
+  currentPassword: 'oldPassword',
+  newPassword: 'newPassword123'
+});
+
+// Change email
+await client.auth.changeEmail({
+  newEmail: 'newemail@example.com',
+  password: 'currentPassword'
+});
+```
+
+### Account Verification
+
+```javascript
+// Send email verification
+await client.auth.sendEmailVerification();
+
+// Verify email with token
+await client.auth.verifyEmail(token);
+
+// Check verification status
+const user = await client.auth.getCurrentUser();
+console.log('Email verified:', user.emailVerified);
+```
+
+## Password Reset
+
+### Reset Flow
+
+```javascript
+// Send reset password email
+await client.auth.sendPasswordReset({
+  email: 'user@example.com'
+});
+
+// Reset password with token
+await client.auth.resetPassword({
+  token: 'reset-token-from-email',
+  newPassword: 'newSecurePassword123'
+});
+```
+
+### Custom Reset Templates
+
+Configure custom email templates:
+
+```javascript
+// Configure in dashboard or via API
+await client.auth.updateEmailTemplates({
+  passwordReset: {
+    subject: 'Reset your password',
+    template: 'custom-reset-template',
+    redirectUrl: 'https://myapp.com/reset-password'
+  }
+});
+```
+
+## Multi-Factor Authentication
+
+### TOTP (Time-based One-Time Passwords)
+
+```javascript
+// Enable TOTP for user
+const totpSetup = await client.auth.enableTOTP();
+console.log('QR Code URL:', totpSetup.qrCode);
+console.log('Manual entry key:', totpSetup.secret);
+
+// Verify TOTP setup
+await client.auth.verifyTOTP({
+  token: '123456' // 6-digit code from authenticator app
+});
+
+// Login with TOTP
+const session = await client.auth.login({
+  email: 'user@example.com',
+  password: 'password123',
+  totpToken: '123456'
+});
+
+// Disable TOTP
+await client.auth.disableTOTP({
+  password: 'currentPassword',
+  totpToken: '123456'
+});
+```
+
+### SMS Authentication
+
+```javascript
+// Send SMS code
+await client.auth.sendSMSCode({
+  phoneNumber: '+1234567890'
+});
+
+// Verify SMS code
+const session = await client.auth.verifySMSCode({
+  phoneNumber: '+1234567890',
+  code: '123456'
+});
+```
+
+## Role-Based Access Control
+
+### User Roles
+
+```javascript
+// Assign role during registration
+const user = await client.auth.register({
+  email: 'admin@example.com',
+  password: 'password123',
+  role: 'admin'
+});
+
+// Update user role (admin only)
+await client.auth.updateUserRole({
+  userId: 'user_123',
+  role: 'moderator'
+});
+
+// Check user permissions
+const user = await client.auth.getCurrentUser();
+const canManageUsers = user.permissions.includes('manage_users');
+```
+
+### Permission Checks
+
+```javascript
+// Client-side permission check
+const hasPermission = await client.auth.hasPermission('create_posts');
+
+// Server-side middleware
+const requirePermission = (permission) => {
+  return async (req, res, next) => {
+    const user = await client.auth.getCurrentUser();
+    if (!user.permissions.includes(permission)) {
+      return res.status(403).json({ error: 'Insufficient permissions' });
+    }
+    next();
+  };
+};
+```
+
+## Custom Authentication
+
+### Custom User Schema
+
+Extend the default user schema:
+
+```json
+{
+  "name": "User",
+  "extends": "LumenizeUser",
+  "fields": {
+    "employeeId": {
+      "type": "string",
+      "unique": true
+    },
+    "department": {
+      "type": "reference",
+      "entity": "Department"
+    },
+    "preferences": {
+      "type": "json"
+    }
+  }
+}
+```
+
+### Custom Authentication Provider
+
+Integrate with external identity providers:
+
+```javascript
+// Custom JWT verification
+const client = new LumenizeClient({
+  projectId: 'proj_abc123',
+  auth: {
+    custom: {
+      verifyToken: async (token) => {
+        // Verify token with your identity provider
+        const payload = await verifyJWT(token);
+        return {
+          userId: payload.sub,
+          email: payload.email,
+          permissions: payload.permissions
+        };
+      }
+    }
+  }
+});
+
+// Use custom token
+await client.auth.setCustomToken(yourJWTToken);
+```
+
+## Security Best Practices
+
+### Password Requirements
+
+```javascript
+// Configure password policy
+await client.auth.updatePasswordPolicy({
+  minLength: 8,
+  requireUppercase: true,
+  requireLowercase: true,
+  requireNumbers: true,
+  requireSymbols: true,
+  maxAge: 90 // days
+});
+```
+
+### Rate Limiting
+
+```javascript
+// Configure auth rate limits
+await client.auth.updateRateLimits({
+  login: {
+    attempts: 5,
+    window: 900 // 15 minutes
+  },
+  registration: {
+    attempts: 3,
+    window: 3600 // 1 hour
+  }
+});
+```
+
+### Session Security
+
+```javascript
+const client = new LumenizeClient({
+  projectId: 'proj_abc123',
+  auth: {
+    session: {
+      duration: 86400,     // 24 hours
+      refreshThreshold: 300, // 5 minutes
+      secureCookies: true,  // HTTPS only
+      sameSite: 'strict'    // CSRF protection
+    }
+  }
+});
+```
+
+## Integration Examples
+
+### React Hook
+
+```jsx
+import { useLumenizeAuth } from '@lumenize/react';
+
+function LoginForm() {
+  const { login, loading, error } = useLumenizeAuth();
+  
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    const formData = new FormData(e.target);
+    
+    try {
+      await login({
+        email: formData.get('email'),
+        password: formData.get('password')
+      });
+    } catch (err) {
+      console.error('Login failed:', err);
+    }
+  };
+  
+  return (
+    <form onSubmit={handleSubmit}>
+      <input name="email" type="email" required />
+      <input name="password" type="password" required />
+      <button type="submit" disabled={loading}>
+        {loading ? 'Logging in...' : 'Login'}
+      </button>
+      {error && <p className="error">{error.message}</p>}
+    </form>
+  );
+}
+```
+
+### Express.js Middleware
+
+```javascript
+const { LumenizeClient } = require('@lumenize/node');
+
+const client = new LumenizeClient({
+  projectId: process.env.LUMENIZE_PROJECT_ID,
+  apiKey: process.env.LUMENIZE_API_KEY
+});
+
+// Authentication middleware
+const authenticate = async (req, res, next) => {
+  try {
+    const token = req.headers.authorization?.replace('Bearer ', '');
+    const user = await client.auth.verifyToken(token);
+    req.user = user;
+    next();
+  } catch (error) {
+    res.status(401).json({ error: 'Unauthorized' });
+  }
+};
+
+// Protected route
+app.get('/api/profile', authenticate, (req, res) => {
+  res.json({ user: req.user });
+});
+```
+
+## Troubleshooting
+
+### Common Issues
+
+**Invalid credentials error:**
+```javascript
+try {
+  await client.auth.login({ email, password });
+} catch (error) {
+  if (error.code === 'INVALID_CREDENTIALS') {
+    console.log('Email or password is incorrect');
+  }
+}
+```
+
+**Token expired error:**
+```javascript
+client.auth.onError((error) => {
+  if (error.code === 'TOKEN_EXPIRED') {
+    // Redirect to login
+    window.location.href = '/login';
+  }
+});
+```
+
+**Rate limit exceeded:**
+```javascript
+try {
+  await client.auth.login({ email, password });
+} catch (error) {
+  if (error.code === 'RATE_LIMIT_EXCEEDED') {
+    console.log('Too many attempts. Please try again later.');
+  }
+}
+```
+
+## Next Steps
+
+- [Access Control](/docs/guides/access-control) - Learn about permissions and roles
+- [Real-time Features](/docs/guides/real-time) - Add live updates to your app
+- [Client Libraries](/docs/client-libraries/javascript) - Explore client integrations

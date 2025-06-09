@@ -1,0 +1,606 @@
+---
+title: JavaScript Client
+description: Use Lumenize with vanilla JavaScript and TypeScript
+sidebar:
+  order: 1
+  label: JavaScript
+---
+
+# JavaScript Client
+
+The Lumenize JavaScript client provides a clean, type-safe way to interact with your Lumenize backend from any JavaScript or TypeScript environment.
+
+## Installation
+
+```bash
+npm install @lumenize/client
+```
+
+## Quick Start
+
+```javascript
+import { LumenizeClient } from '@lumenize/client';
+
+const client = new LumenizeClient({
+  projectId: 'proj_abc123',
+  apiKey: 'lum_live_xyz789',
+  environment: 'production' // 'development', 'staging', or 'production'
+});
+
+// Create a new user
+const user = await client.users.create({
+  name: 'John Doe',
+  email: 'john@example.com'
+});
+
+// Fetch all users
+const users = await client.users.findMany();
+
+// Update a user
+const updatedUser = await client.users.update(user.id, {
+  name: 'John Smith'
+});
+```
+
+## Configuration
+
+### Basic Configuration
+
+```javascript
+const client = new LumenizeClient({
+  projectId: 'proj_abc123',      // Your project ID
+  apiKey: 'lum_live_xyz789',     // Your API key
+  environment: 'production',      // Target environment
+  baseUrl: 'https://api.lumenize.dev', // Optional: custom base URL
+  timeout: 5000,                 // Request timeout in ms
+  retries: 3,                    // Number of retry attempts
+  retryDelay: 1000              // Delay between retries in ms
+});
+```
+
+### TypeScript Configuration
+
+```typescript
+import { LumenizeClient, User, Task } from '@lumenize/client';
+
+// Fully typed client
+const client = new LumenizeClient({
+  projectId: 'proj_abc123',
+  apiKey: 'lum_live_xyz789'
+});
+
+// Type-safe operations
+const user: User = await client.users.create({
+  name: 'John Doe',
+  email: 'john@example.com'
+});
+
+const tasks: Task[] = await client.tasks.findMany({
+  where: { assignedTo: user.id }
+});
+```
+
+## CRUD Operations
+
+### Create
+
+```javascript
+// Create a single entity
+const user = await client.users.create({
+  name: 'Alice Johnson',
+  email: 'alice@example.com',
+  role: 'admin'
+});
+
+// Create multiple entities
+const users = await client.users.createMany([
+  { name: 'Bob Wilson', email: 'bob@example.com' },
+  { name: 'Carol Brown', email: 'carol@example.com' }
+]);
+```
+
+### Read
+
+```javascript
+// Find by ID
+const user = await client.users.findById('user_123');
+
+// Find with filters
+const adminUsers = await client.users.findMany({
+  where: { role: 'admin' }
+});
+
+// Find with complex queries
+const recentTasks = await client.tasks.findMany({
+  where: {
+    createdAt: { gte: new Date('2024-01-01') },
+    status: { in: ['pending', 'in_progress'] }
+  },
+  orderBy: { createdAt: 'desc' },
+  limit: 10,
+  offset: 0
+});
+
+// Find with relationships
+const userWithTasks = await client.users.findById('user_123', {
+  include: { tasks: true }
+});
+```
+
+### Update
+
+```javascript
+// Update by ID
+const updatedUser = await client.users.update('user_123', {
+  name: 'New Name',
+  email: 'newemail@example.com'
+});
+
+// Update multiple entities
+const result = await client.users.updateMany(
+  { where: { role: 'guest' } },
+  { role: 'user' }
+);
+
+// Partial updates
+const task = await client.tasks.update('task_123', {
+  status: 'completed',
+  completedAt: new Date()
+});
+```
+
+### Delete
+
+```javascript
+// Delete by ID
+await client.users.delete('user_123');
+
+// Soft delete (if enabled in schema)
+await client.users.delete('user_123', { soft: true });
+
+// Delete multiple entities
+const result = await client.users.deleteMany({
+  where: { lastLoginAt: { lt: new Date('2023-01-01') } }
+});
+
+// Restore soft-deleted entity
+await client.users.restore('user_123');
+```
+
+## Query Builder
+
+### Advanced Filtering
+
+```javascript
+// Complex where conditions
+const tasks = await client.tasks.findMany({
+  where: {
+    AND: [
+      { status: 'pending' },
+      { priority: { in: ['high', 'urgent'] } },
+      {
+        OR: [
+          { dueDate: { lt: new Date() } },
+          { assignedTo: 'user_123' }
+        ]
+      }
+    ]
+  }
+});
+
+// Text search
+const users = await client.users.findMany({
+  where: {
+    name: { contains: 'john' }
+  }
+});
+
+// Numeric comparisons
+const expensiveTasks = await client.tasks.findMany({
+  where: {
+    budget: { gte: 1000, lte: 5000 }
+  }
+});
+```
+
+### Sorting and Pagination
+
+```javascript
+// Multiple sort fields
+const tasks = await client.tasks.findMany({
+  orderBy: [
+    { priority: 'desc' },
+    { createdAt: 'asc' }
+  ],
+  limit: 20,
+  offset: 40
+});
+
+// Cursor-based pagination
+const tasks = await client.tasks.findMany({
+  orderBy: { createdAt: 'desc' },
+  limit: 10,
+  cursor: 'task_456'
+});
+```
+
+### Field Selection
+
+```javascript
+// Select specific fields
+const users = await client.users.findMany({
+  select: ['id', 'name', 'email']
+});
+
+// Include relationships
+const userWithDetails = await client.users.findById('user_123', {
+  include: {
+    tasks: {
+      where: { status: 'pending' },
+      orderBy: { dueDate: 'asc' }
+    },
+    profile: true
+  }
+});
+```
+
+## Real-time Subscriptions
+
+### WebSocket Connection
+
+```javascript
+// Establish WebSocket connection
+await client.connect();
+
+// Subscribe to entity changes
+const unsubscribe = client.tasks.subscribe('*', (event) => {
+  console.log(`Task ${event.id} was ${event.type}d:`, event.data);
+});
+
+// Subscribe to specific entity
+client.users.subscribe('user_123', (event) => {
+  console.log('User updated:', event.data);
+});
+
+// Subscribe with filters
+client.tasks.subscribe({
+  where: { assignedTo: 'user_123' }
+}, (tasks) => {
+  console.log('My tasks updated:', tasks);
+});
+
+// Cleanup
+unsubscribe();
+await client.disconnect();
+```
+
+### Event Types
+
+```javascript
+client.tasks.subscribe('*', (event) => {
+  switch (event.type) {
+    case 'created':
+      console.log('New task:', event.data);
+      break;
+    case 'updated':
+      console.log('Task updated:', event.data);
+      break;
+    case 'deleted':
+      console.log('Task deleted:', event.id);
+      break;
+  }
+});
+```
+
+## Authentication
+
+### User Authentication
+
+```javascript
+// Login with email/password
+const session = await client.auth.login({
+  email: 'user@example.com',
+  password: 'password123'
+});
+
+// Login with OAuth provider
+const session = await client.auth.loginWithProvider('google');
+
+// Get current user
+const currentUser = await client.auth.getCurrentUser();
+
+// Logout
+await client.auth.logout();
+```
+
+### Session Management
+
+```javascript
+// Check authentication status
+const isAuthenticated = client.auth.isAuthenticated();
+
+// Refresh token
+await client.auth.refreshToken();
+
+// Handle session events
+client.auth.onSessionChange((session) => {
+  if (session) {
+    console.log('User logged in:', session.user);
+  } else {
+    console.log('User logged out');
+  }
+});
+```
+
+## Error Handling
+
+### Try-Catch Pattern
+
+```javascript
+try {
+  const user = await client.users.create({
+    name: 'John Doe',
+    email: 'invalid-email'
+  });
+} catch (error) {
+  if (error.code === 'VALIDATION_ERROR') {
+    console.log('Validation failed:', error.details);
+  } else if (error.code === 'NETWORK_ERROR') {
+    console.log('Network error:', error.message);
+  } else {
+    console.log('Unknown error:', error);
+  }
+}
+```
+
+### Global Error Handler
+
+```javascript
+client.onError((error) => {
+  console.error('Lumenize error:', error);
+  
+  // Send to error tracking service
+  errorTracker.captureException(error);
+});
+```
+
+## Caching
+
+### Automatic Caching
+
+```javascript
+const client = new LumenizeClient({
+  projectId: 'proj_abc123',
+  apiKey: 'lum_live_xyz789',
+  cache: {
+    enabled: true,
+    ttl: 300000, // 5 minutes
+    maxSize: 1000 // Maximum cached items
+  }
+});
+
+// Subsequent calls use cache
+const user1 = await client.users.findById('user_123'); // Fetches from API
+const user2 = await client.users.findById('user_123'); // Returns from cache
+```
+
+### Cache Control
+
+```javascript
+// Bypass cache for fresh data
+const freshUser = await client.users.findById('user_123', {
+  cache: false
+});
+
+// Invalidate cache
+client.cache.invalidate('users', 'user_123');
+
+// Clear all cache
+client.cache.clear();
+```
+
+## Middleware
+
+### Request Middleware
+
+```javascript
+// Add request interceptor
+client.interceptors.request.use((request) => {
+  // Add custom headers
+  request.headers['X-Custom-Header'] = 'value';
+  
+  // Log requests
+  console.log('Request:', request.method, request.url);
+  
+  return request;
+});
+
+// Add response interceptor
+client.interceptors.response.use(
+  (response) => {
+    console.log('Response:', response.status, response.data);
+    return response;
+  },
+  (error) => {
+    console.error('Response error:', error);
+    throw error;
+  }
+);
+```
+
+### Custom Middleware
+
+```javascript
+// Create custom middleware
+const loggingMiddleware = (next) => async (request) => {
+  const start = Date.now();
+  const response = await next(request);
+  const duration = Date.now() - start;
+  
+  console.log(`${request.method} ${request.url} - ${duration}ms`);
+  return response;
+};
+
+// Apply middleware
+client.use(loggingMiddleware);
+```
+
+## Advanced Features
+
+### Batch Operations
+
+```javascript
+// Batch multiple operations
+const batch = client.batch();
+
+batch.users.create({ name: 'User 1', email: 'user1@example.com' });
+batch.users.create({ name: 'User 2', email: 'user2@example.com' });
+batch.tasks.update('task_123', { status: 'completed' });
+
+// Execute batch
+const results = await batch.execute();
+```
+
+### Transactions
+
+```javascript
+// Perform operations in a transaction
+const result = await client.transaction(async (tx) => {
+  const user = await tx.users.create({
+    name: 'John Doe',
+    email: 'john@example.com'
+  });
+  
+  const task = await tx.tasks.create({
+    title: 'Welcome task',
+    assignedTo: user.id
+  });
+  
+  return { user, task };
+});
+```
+
+### File Uploads
+
+```javascript
+// Upload file
+const file = document.getElementById('fileInput').files[0];
+
+const uploadResult = await client.files.upload(file, {
+  folder: 'avatars',
+  public: true
+});
+
+// Update user with avatar URL
+await client.users.update('user_123', {
+  avatar: uploadResult.url
+});
+```
+
+## Node.js Specific Features
+
+### Server-Side Usage
+
+```javascript
+// Node.js server usage
+import { LumenizeClient } from '@lumenize/node';
+
+const client = new LumenizeClient({
+  projectId: process.env.LUMENIZE_PROJECT_ID,
+  apiKey: process.env.LUMENIZE_API_KEY
+});
+
+// Server-side operations
+app.get('/api/users', async (req, res) => {
+  try {
+    const users = await client.users.findMany();
+    res.json(users);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+```
+
+### Environment Variables
+
+```bash
+# .env file
+LUMENIZE_PROJECT_ID=proj_abc123
+LUMENIZE_API_KEY=lum_live_xyz789
+LUMENIZE_ENVIRONMENT=production
+```
+
+## Best Practices
+
+### Error Handling
+
+```javascript
+// ✅ Good: Specific error handling
+try {
+  await client.users.create(userData);
+} catch (error) {
+  switch (error.code) {
+    case 'VALIDATION_ERROR':
+      return handleValidationError(error);
+    case 'PERMISSION_DENIED':
+      return handlePermissionError(error);
+    default:
+      return handleGenericError(error);
+  }
+}
+```
+
+### Performance
+
+```javascript
+// ✅ Good: Use field selection for large objects
+const users = await client.users.findMany({
+  select: ['id', 'name', 'email'], // Only fetch needed fields
+  limit: 100
+});
+
+// ✅ Good: Use pagination for large datasets
+const getAllUsers = async () => {
+  const users = [];
+  let cursor = null;
+  
+  do {
+    const page = await client.users.findMany({
+      limit: 100,
+      cursor
+    });
+    
+    users.push(...page.data);
+    cursor = page.nextCursor;
+  } while (cursor);
+  
+  return users;
+};
+```
+
+### Security
+
+```javascript
+// ✅ Good: Never expose API keys in client-side code
+const client = new LumenizeClient({
+  projectId: 'proj_abc123',
+  // Use public key for client-side
+  apiKey: 'lum_pub_xyz789'
+});
+
+// ✅ Good: Validate data before sending
+const createUser = async (userData) => {
+  if (!userData.email || !isValidEmail(userData.email)) {
+    throw new Error('Valid email is required');
+  }
+  
+  return client.users.create(userData);
+};
+```
+
+## Next Steps
+
+- [React Client](/docs/client-libraries/react) - React-specific hooks and components
+- [Svelte Client](/docs/client-libraries/svelte) - Svelte stores and components
+- [Authentication](/docs/guides/authentication) - User authentication and sessions
+- [Real-time Features](/docs/guides/real-time) - WebSocket subscriptions
