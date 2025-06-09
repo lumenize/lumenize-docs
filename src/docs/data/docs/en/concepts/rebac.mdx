@@ -1,0 +1,117 @@
+---
+title: Access Control (ReBAC)
+description: Understanding Relationship-based Access Control in Lumenize
+sidebar:
+  order: 2
+---
+
+# Relationship-based Access Control (ReBAC)
+
+Lumenize uses a flavor of [relationship-based access control (ReBAC)](https://en.wikipedia.org/wiki/Relationship-based_access_control), also known as graph-based access control (GBAC). While ReBAC may be unfamiliar, it's ideal for modern enterprise software.
+
+## Why ReBAC?
+
+Traditional role-based access control (RBAC) struggles with complex organizational relationships. ReBAC excels at modeling:
+
+- Teams that work across multiple departments
+- Temporary projects borrowing resources from various units
+- Coaches or consultants who need visibility across organizational boundaries
+- Matrix organizations with multiple reporting structures
+
+## The Directed Acyclic Graph (DAG)
+
+The OrgTree uses a DAG structure where each node can have multiple parents, unlike traditional single-parent hierarchies.
+
+### Real-World Example
+
+Consider a security team that:
+- Officially reports to the IT department
+- Does most of its work for the Legal department  
+- Provides services to the entire organization
+
+In a DAG, this team can have multiple parents:
+- IT Department (official reporting)
+- Legal Department (primary work relationship)
+- Enterprise Services (organization-wide visibility)
+
+Each relationship can grant different permission levels based on the context.
+
+## Permission Inheritance
+
+Permissions flow down the graph:
+- Grant `read` permission on IT Department → Security team inherits `read`
+- Grant `write` permission on Legal Department → Security team inherits `write`
+- Grant `admin` permission on Enterprise Services → Security team inherits `admin`
+
+The user gets the **highest** permission level from any path in the graph.
+
+## Permission Levels
+
+### Read Permission
+- View node values and attached entities
+- Navigate the organizational structure
+- Access custom fields added to schemas
+
+### Write Permission
+- All `read` capabilities, plus:
+- Modify node and entity values
+- Create new entities attached to the node or descendants
+- Soft delete/restore entities
+- Add additional parent relationships (with `write` on new parent)
+
+### Admin Permission
+- All `write` capabilities, plus:
+- Update permissions for the node and descendants
+- Manage organizational structure
+
+## Visibility Rules
+
+**Public information** (visible to everyone):
+- OrgTree structure itself
+- Base schema fields (id, slug, name)
+
+**Protected information** (requires permissions):
+- Custom schema fields
+- Attached entities
+- Business data
+
+This allows navigation without exposing sensitive information.
+
+## Advanced Use Cases
+
+### Rollup Reporting
+
+Create temporary organizational groupings for analysis:
+1. Create node "High Performers"
+2. Add top teams as additional children
+3. Generate comparative reports
+4. Remove grouping when analysis complete
+
+### Peer Group Benchmarking
+
+Enable competitive analysis without exposing raw data:
+1. Create challenge group with participating teams
+2. Teams see their percentile ranking within the group
+3. Individual team metrics remain private
+4. Temporary structure dissolves after challenge
+
+### Cross-Functional Projects
+
+Model complex project relationships:
+1. Create project node
+2. Add team members from various departments as children
+3. Project manager gets `admin` on project node
+4. Stakeholders get appropriate `read`/`write` permissions
+
+## Implementation Benefits
+
+- **Flexibility**: Model complex real-world relationships
+- **Security**: Granular, inherited permissions
+- **Scalability**: Efficient permission checking
+- **Auditability**: Clear permission paths
+- **Maintainability**: Change structure without rebuilding permissions
+
+## Next Steps
+
+- [Entities and Schemas](/docs/concepts/entities) - Learn about data modeling in Lumenize
+- [Access Control Examples](/docs/concepts/rebac-examples) - See ReBAC in action

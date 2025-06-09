@@ -1,0 +1,196 @@
+---
+title: Server-Side Usage
+description: How to implement and configure Lumenize on the server
+sidebar:
+  order: 1
+---
+
+# Server-Side Usage
+
+Learn how to set up and configure Lumenize in your Cloudflare Workers environment.
+
+## Basic Implementation
+
+### With Cloudflare Agent Base Class
+
+```typescript
+import { LumenizeServer } from 'lumenize';
+import { Agent, routeAgentRequest, Connection, ExecutionContext, WSMessage } from 'agents';
+
+class MyLumenizeClass extends Agent<Env> {
+  // Optional: Handle non-JSON-RPC HTTP requests
+  async onRequest(request: Request): Promise<Response> {
+    return new Response('Custom HTTP handler', { status: 200 });
+  }
+  
+  // Optional: Handle non-JSON-RPC WebSocket messages
+  async onMessage(connection: Connection, message: WSMessage): Promise<void> {
+    connection.send('Custom WebSocket handler');
+  }
+
+  // Your custom methods - automatically exposed via JSON-RPC and MCP
+  async getUserProfile(userId: string) {
+    // Implementation here
+    return { id: userId, name: 'John Doe' };
+  }
+
+  async updateTeamMetrics(teamId: string, metrics: any) {
+    // Implementation here
+    return { success: true, teamId, metrics };
+  }
+}
+
+// Create your Durable Object class
+export const MyLumenizeServer = LumenizeServer(MyLumenizeClass);
+
+// Worker entry point
+export default {
+  async fetch(request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
+    return await routeAgentRequest(request, env);
+  }
+} satisfies ExportedHandler<Env>;
+```
+
+## Configuration Options
+
+### Custom Routes and Security
+
+```typescript
+export const MyLumenizeServer = LumenizeServer(MyLumenizeClass, {
+  route: 'api',  // Change from default '/jsonrpc' to '/api'
+  disallowedMethods: [
+    'privateMethod',
+    'internalHelper',
+    'sensitiveOperation'
+  ]
+});
+```
+
+### Configuration Parameters
+
+| Option | Type | Default | Description |
+|--------|------|---------|-------------|
+| `route` | `string` | `'jsonrpc'` | Endpoint path for JSON-RPC requests |
+| `disallowedMethods` | `string[]` | See below | Methods to exclude from RPC access |
+
+### Default Disallowed Methods
+
+The following methods are blocked by default (matching Cloudflare RPC restrictions):
+
+```typescript
+[
+  "fetch",
+  "connect", 
+  "dup",
+  "constructor",
+  "alarm",
+  "webSocketMessage",
+  "webSocketClose", 
+  "webSocketError"
+]
+```
+
+## Method Implementation
+
+### JSON-RPC Compatible Methods
+
+Methods are automatically exposed if they:
+- Are public (not private/protected)
+- Are not in the disallowed list
+- Return serializable values
+
+```typescript
+class MyLumenizeClass extends Agent<Env> {
+  // ✅ Will be exposed
+  async calculateTotal(items: number[]): Promise<number> {
+    return items.reduce((sum, item) => sum + item, 0);
+  }
+
+  // ✅ Will be exposed - supports both named and positional params
+  subtract(...args: any): number {
+    if (args.length === 1 && typeof args[0] === 'object') {
+      // Named parameters: { minuend: 42, subtrahend: 23 }
+      const { minuend, subtrahend } = args[0];
+      return minuend - subtrahend;
+    } else if (args.length === 2) {
+      // Positional parameters: [42, 23]
+      return args[0] - args[1];
+    }
+    throw new TypeError("Invalid parameters");
+  }
+
+  // ❌ Won't be exposed (private)
+  #privateHelper() {
+    return "internal logic";
+  }
+
+  // ❌ Won't be exposed (in disallowed list)
+  constructor() {
+    super();
+  }
+}
+```
+
+### Error Handling
+
+Errors thrown from methods trigger appropriate JSON-RPC error responses:
+
+```typescript
+async riskyOperation(data: any) {
+  if (!data) {
+    // Triggers JSON-RPC error code -32602 (Invalid params)
+    throw new TypeError("Data parameter is required");
+  }
+  
+  if (data.forbidden) {
+    // Triggers JSON-RPC error code -32000 (Server error)
+    throw new Error("Operation not permitted");
+  }
+  
+  return { success: true };
+}
+```
+
+## Security Considerations
+
+### Method Privacy
+
+Use JavaScript native private methods for true privacy:
+
+```typescript
+class MyLumenizeClass extends Agent<Env> {
+  // ✅ Truly private - not accessible via RPC
+  #calculateSecret(input: string): string {
+    return `secret-${input}`;
+  }
+
+  // ⚠️ May be accessible depending on TypeScript settings
+  private tsPrivateMethod(): string {
+    return "maybe accessible";
+  }
+
+  // ✅ Public method that uses private helper
+  async getProcessedData(input: string): Promise<string> {
+    const secret = this.#calculateSecret(input);
+    return `processed-${secret}`;
+  }
+}
+```
+
+### Access Control Integration
+
+Lumenize's ReBAC system automatically applies to all operations:
+
+```typescript
+async getTeamData(teamId: string, userId: string) {
+  // ReBAC automatically checks if userId has read access to teamId
+  // No manual permission checking required
+  return await this.getEntityById('team', teamId);
+}
+```
+
+## Next Steps
+
+- [Client Usage](/docs/usage/client) - Learn how to call your server methods
+- [Entity Management](/docs/usage/entities) - Work with data entities
+- [WebSocket Integration](/docs/usage/websockets) - Implement real-time features

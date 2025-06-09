@@ -1,0 +1,100 @@
+---
+title: Features Overview
+description: Comprehensive overview of Lumenize capabilities
+sidebar:
+  order: 1
+---
+
+# Features Overview
+
+Lumenize combines the best aspects of multiple database paradigms while providing modern API interfaces and real-time capabilities.
+
+## Database Capabilities
+
+### Multi-Paradigm Data Store
+
+**Document DB + Relational DB + Realtime DB + Temporal DB + ORM**
+
+- **Document DB behavior**: MongoDB-like query language using SQLite's JSON support
+- **Relational DB behavior**: Specify fields for indexing, uniqueness, and foreign keys  
+- **Realtime DB behavior**: Pub-sub over WebSockets for live updates
+- **Temporal DB behavior**: Queryable history of all changes maintained automatically
+- **ORM behavior**: Schema enforcement and validation
+
+## API Interfaces
+
+### Model Context Protocol (MCP) Support
+
+- **Automatic tool exposure**: All public DO class methods become MCP tools
+- **Resource access**: All entities exposed as MCP resources
+- **HTTP stream support**: (Coming soon)
+- **Full MCP compliance**: Complete tools and resources spec with subscribe/unsubscribe (Coming soon)
+
+### Cloudflare Native RPC
+
+- **Seamless integration**: Your DO class methods are automatically available as RPC
+- **Built-in MCP methods**: Access MCP functionality via native RPC (e.g., `stub['tools/subtract'](42, 23)`)
+- **Convenient aliases**: Snake_case alternatives (e.g., `stub.tools_subtract(42, 23)`)
+
+### JSON-RPC 2.0
+
+- **Full spec compliance**: Batches, notifications, errors, named/positional parameters
+- **Method exposure**: All public DO class methods automatically available
+- **Entity operations**: Built-in get, upsert, delete methods for all entities
+- **Multi-transport**: HTTP and WebSockets (unlike Cloudflare native RPC)
+- **Real-time subscriptions**: Subscribe to entity updates via WebSockets
+
+## Client Libraries
+
+### Reactive Clients
+
+- **Svelte support**: `useLumenize()` hook with automatic reactivity
+- **React support**: (Coming soon)
+- **WebSocket multiplexing**: Shared connections across browser tabs via SharedWorker
+- **Storage-based reactivity**: localStorage/StorageEvent core for custom implementations
+
+### Generic Client
+
+- **Universal compatibility**: Non-reactive LumenizeClient for any JavaScript/TypeScript environment
+- **Simple API**: Clean interface for all Lumenize operations
+- **Flexible transport**: HTTP and WebSocket support
+
+## Security & Access Control
+
+### Built-in ReBAC
+
+- **Relationship-based**: Superset of traditional RBAC
+- **Graph-based permissions**: Complex organizational modeling
+- **Inheritance**: Permissions flow through organizational structure
+- **Granular control**: Read, write, and admin permission levels
+
+## Advanced Features
+
+### Aggregations (Coming Soon)
+
+- **Proven OLAP engine**: Based on Lumenize library used by Broadcom, BMW, CA
+- **Rollup reporting**: Automatic aggregation across organizational hierarchies  
+- **Peer-group benchmarking**: Compare performance within organizational groupings
+- **Real-time charts**: Auto-updating visualizations via declarative configuration
+- **AMCharts integration**: Built-in support with more chart libraries coming
+
+### Time-Series Support
+
+- **Temporal API integration**: Built around JavaScript's upcoming Temporal API
+- **Rich date/time handling**: Time zones, durations, and complex temporal operations
+- **Valid time semantics**: Complete audit trail with queryable history
+
+## Platform Integration
+
+### Cloudflare Ecosystem
+
+- **Durable Objects**: Built specifically for Cloudflare's paradigm
+- **Workers integration**: Seamless deployment and scaling
+- **Edge optimization**: Global distribution and low latency
+- **Ecosystem compatibility**: Works with Queues, Workflows, LLMs, KV, R2
+
+## Next Steps
+
+- [MCP Support](/docs/features/mcp) - Learn about Model Context Protocol integration
+- [Real-time Features](/docs/features/realtime) - Explore WebSocket and pub-sub capabilities
+- [Client Libraries](/docs/features/clients) - Discover available client options

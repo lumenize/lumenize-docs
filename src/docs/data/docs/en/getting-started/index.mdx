@@ -1,32 +1,41 @@
 ---
 title: Welcome to Lumenize
-description: Learn about the Documentation Theme and its key features
+description: You provide the schemas. Lumenize provides a complete MCP-first backend.
 sidebar:
   order: 1
   label: Introduction
 ---
 
-Lumenize is a modern, fast, and feature-rich documentation template built with Astro v5 and Tailwind CSS v4. It's designed to help you create beautiful and functional documentation websites with minimal setup.
+# Lumenize
+_You provide the schemas. Lumenize provides a complete MCP-first backend._
 
-<Aside variant="tip">
-  This template can be a standalone docs site, or easily integrated with other templates by Cosmic Themes.
-</Aside>
+Lumenize turns your schemas into a full featured MCP-first backend with Access Control, tools/resources/subscribe, CRUD, JSON-RPC, Cloudflare native RPC, Realtime pub-sub over WebSockets, Aggregations, Svelte/React support, and more.
 
-## Key Features
+## The Problem
 
-- **I18n support** - Full i18n capabilities with a simple config script
-- **Useful Components** - Pre-built components to help you create exceptional documentation, including:
-  - [Asides](/docs/components/aside)
-  - [Tabs](/docs/components/tabs)
-  - [Steps](/docs/components/steps)
-  - [Buttons](/docs/components/button)
-  - [Badges](/docs/components/badge)
-- **Modern design** - Clean, modern interface with Tailwind CSS v4
-- **Fully responsive** - Looks great on all devices
-- **Search functionality** - Help users find content quickly with integrated Pagefind search
-- **Dark mode** - Built-in dark mode support
-- **Customizable** - Easy to modify and extend
+Cloudflare's Durable Objects (DO) are a paradigm shift in how we think about building applications. An SQLite database per DO instance, the ability to write stored procedures in Java/TypeScript, hibernatable WebSockets, and an elegant RPC implementation are all novel if not completely unique. Add to that the rest of the robust distributed computing foundations that Cloudflare provides -- Queues, Workflows, LLMs, KV, R2, etc. -- and you have a powerful platform for building modern applications.
 
-## Getting Started
+However, paradigm shifts are hard. We are limited by our prior experiences and try to graft concepts and patterns onto a platform where they don't always sit comfortably.
 
-Check out the [Theme Integration Guide](/docs/getting-started/integrating) guide to begin using Lumenize Theme with another template by Cosmic Themes.
+## The Solution
+
+What if we built a backend that was designed from the ground up to take advantage of the DO paradigm and the Cloudflare platform?
+
+That's the goal of Lumenize.
+
+## When to Use Lumenize
+
+Use Lumenize instead of Cloudflare's MCP and Agent offerings when:
+- You want to get up and running as quickly as possible with a full backend rather than piece together a bespoke solution
+- You want state synchronization but you've hit Agent's state synchronization limitations (no SQL data support, all or nothing updates, etc.)
+- You are building a product that requires comprehensive backend functionality out of the box
+
+Use Cloudflare's MCP or Agent offerings instead when:
+- You have an existing Cloudflare solution but want to simply add MCP or Agent capabilities to it
+- You can't live with the design choices of this backend (the biggest objection will likely be the use of ReBAC)
+
+## What's Next?
+
+- [Installation](/docs/getting-started/installation) - Get Lumenize up and running
+- [Core Concepts](/docs/concepts/overview) - Understand the key concepts behind Lumenize
+- [Features](/docs/features/overview) - Explore what Lumenize can do for you

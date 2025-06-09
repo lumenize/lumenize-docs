@@ -1,0 +1,91 @@
+---
+title: Installation
+description: Get started with Lumenize in minutes
+sidebar:
+  order: 2
+---
+
+# Installation
+
+Get Lumenize up and running in your Cloudflare environment.
+
+## Prerequisites
+
+- Node.js 18 or later
+- A Cloudflare account with Workers and Durable Objects enabled
+- Basic familiarity with TypeScript and Cloudflare Workers
+
+## Install Lumenize
+
+```bash
+npm install lumenize-server
+```
+
+## Basic Setup
+
+Here's a minimal example to get you started with Lumenize:
+
+```typescript
+// In the file that defines your Worker and DO
+import { LumenizeServer } from 'lumenize';
+import { Agent, routeAgentRequest, Connection, ExecutionContext, WSMessage } from 'agents';
+
+class MyClass extends Agent<Env> {
+  // Optional custom request handler
+  async onRequest(request: Request): Promise<Response> {
+    return new Response('Custom handler', { status: 200 });
+  }
+  
+  // Optional custom message handler
+  async onMessage(connection: Connection, message: WSMessage): Promise<void> {
+    connection.send('Custom message handler');
+  }
+
+  // Example method - will be automatically exposed via JSON-RPC
+  subtract(...args: any): number {
+    if (args.length === 1 && typeof args[0] === 'object') {
+      // Named parameters
+      const { minuend, subtrahend } = args[0];
+      if (minuend && typeof minuend === 'number' && subtrahend && typeof subtrahend === 'number') {
+        return minuend - subtrahend;
+      }
+    } else if (args.length === 2) {
+      // Positional parameters
+      if (typeof args[0] === 'number' && typeof args[1] === 'number') {
+        return args[0] - args[1];
+      }
+    }
+    throw new TypeError("Invalid parameters for subtract method");
+  }
+}
+
+export const TestLumenizeServer = LumenizeServer(MyClass);
+
+export default {
+  async fetch(request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
+    return await routeAgentRequest(request, env)
+  }
+} satisfies ExportedHandler<Env>;
+```
+
+## Configuration Options
+
+You can customize Lumenize behavior with these options:
+
+```typescript
+export const TestLumenizeServer = LumenizeServer(MyClass, {
+  route: 'rpc',  // Change route from '/jsonrpc' to '/rpc'
+  disallowedMethods: ['privateMethod', 'internalMethod'],  // Prevent access to specific methods
+});
+```
+
+### Available Options
+
+- `route`: The endpoint path for JSON-RPC requests (default: `/jsonrpc`)
+- `disallowedMethods`: Array of method names to exclude from RPC access
+
+## Next Steps
+
+- [Core Concepts](/docs/concepts/overview) - Learn about OrgTree, entities, and schemas
+- [Server Usage](/docs/usage/server) - Dive deeper into server-side implementation
+- [Client Usage](/docs/usage/client) - Learn how to interact with your Lumenize backend

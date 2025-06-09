@@ -1,0 +1,76 @@
+---
+title: Core Concepts
+description: Understanding the foundational concepts of Lumenize
+sidebar:
+  order: 1
+---
+
+# Core Concepts
+
+Lumenize is built around several key concepts that work together to provide a powerful, flexible backend system.
+
+## The OrgTree
+
+The core data structure of every Lumenize server instance is the **OrgTree** - a directed acyclic graph (DAG) with a single root node representing your organization.
+
+Key characteristics:
+- **Single root**: The root node represents the organization (e.g., IBM or DHS)
+- **Hierarchical structure**: Primary children are divisions, departments, teams, and other organizational units
+- **Multiple parents**: Unlike traditional trees, nodes can have multiple parents
+- **Extensible**: Add custom fields to org unit schemas to fit your needs
+
+## Entities and Schemas
+
+Everything in Lumenize is an **entity** - a data object with:
+- A defined schema
+- A unique identifier (UUIDv4)
+- Attachment to the OrgTree (directly or indirectly)
+
+### OrgNode Schema
+
+Default OrgTree node fields:
+- `id`: Unique UUIDv4 identifier
+- `slug`: Unique string slug within the OrgTree
+- `name`: Human-readable name
+- `children`: Object mapping child node IDs to relationship metadata
+
+You can extend nodes with custom schemas while preserving core functionality.
+
+## Access Control (ReBAC)
+
+Lumenize uses **Relationship-based Access Control (ReBAC)**, also known as graph-based access control (GBAC).
+
+### Permission Levels
+
+Permissions are cumulative and inherited:
+
+- **`read`**: Access to node values and attached entities
+- **`write`**: Modify values, create entities, soft delete/restore, add parents
+- **`admin`**: Update permissions for the node and descendants
+
+### Inheritance
+
+Permissions granted on a node are automatically inherited by all descendant nodes, enabling flexible access patterns across complex organizational structures.
+
+## Temporal Data Model
+
+Lumenize maintains complete history using **valid time** semantics:
+
+- **Snapshots**: Immutable versions of entities at specific points in time
+- **Time periods**: Each snapshot has `validFrom` (inclusive) and `validTo` (exclusive) timestamps
+- **Continuous timeline**: No gaps between snapshots
+- **Built for Temporal API**: Designed around JavaScript's upcoming Temporal API
+
+## Why These Concepts Matter
+
+These foundational concepts enable:
+- **Flexible organizational modeling** through DAG structure
+- **Comprehensive access control** via ReBAC
+- **Complete audit trails** through temporal data
+- **Scalable architecture** leveraging Cloudflare's platform
+
+## Next Steps
+
+- [Access Control (ReBAC)](/docs/concepts/rebac) - Deep dive into permission system
+- [Entities and Schemas](/docs/concepts/entities) - Learn about data modeling
+- [Temporal Features](/docs/concepts/temporal) - Understand time-based data handling
