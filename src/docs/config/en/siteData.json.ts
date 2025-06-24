@@ -40,14 +40,14 @@ const docsSiteData: DocsSiteData = {
 	],
 	// default image for meta tags if the page doesn't have an image already
 	defaultImage: {
-		src: "/images/cosmic-themes-logo.png",
-		alt: "Cosmic Themes logo",
+		src: "/images/lumenize-logo.png",
+		alt: "Lumenize logo",
 	},
 	// Your information for SEO purposes
 	author: {
-		name: "Cosmic Themes",
-		email: "creator@cosmicthemes.com",
-		twitter: "Cosmic_Themes",
+		name: "Larry Maccherone",
+		email: "email@lumenize.com",
+		twitter: "Lumenize",
 	},
 };
 
