@@ -1,20 +1,22 @@
 ---
-import { Image } from "astro:assets";
-
 import { getLocaleFromUrl } from "@/docs/js/localeUtils";
 import { getLocalizedRoute } from "@/docs/js/translationUtils";
 import { getTranslatedData } from "@/docs/js/translationUtils";
-
-// import { docsSiteData } from "@/docs/config/siteData.config";
 
 const currLocale = getLocaleFromUrl(Astro.url);
 const siteData = getTranslatedData("siteData", currLocale);
 ---
 
 <a
-	class="docs-primary-focus text-foreground flex items-center align-middle text-xl font-bold"
+	class="docs-primary-focus text-foreground flex items-center align-middle text-xl font-bold gap-2"
 	href={getLocalizedRoute(currLocale)}
-	class=""
 >
-	<div class="">{siteData.title}</div>
+	<img
+		src="/src/assets/images/lumenize-logo.svg"
+		alt="Lumenize Logo"
+		width="36"
+		height="36"
+		class="inline-block align-middle"
+	/>
+	<span class="hidden sm:inline">{siteData.title}</span>
 </a>
